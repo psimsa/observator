@@ -1,0 +1,9 @@
+## Observator
+### This is a set of tools to make instrumentation using Open Telemetry easier. It will consist of the following:
+
+- `ActivitySource` generation: Each assembly that references the code generator will have a built in activity source (with fixed name tbd) that uses assembly name as name and assembly version as version. Optional: Also provide a way to register the activity source within the Open Telemetry stack. It should not involve adding dependencies on open telemetry libraries though. Initially, maybe just expose the name as static property.
+- `Meter` generation: Each assembly will also have a default Meter generated. Details are tbd.
+- Tracing, Logging and optionally Metrics instrumentation generation: When a method is annotated with a particular attribute (name tbd), calls to this method will be traced. This will be achieved by generating an interceptor for the method calls that will use the built-in ActivitySource to start a trace. Ideally, the annotating attribute should also be generated in the library in the same way as the activity source so that no dependencies are required. Initially, just start the activity.
+  - It seems like the interception happens at the method call time, not a body replacement. Can this be worked around?
+  - Task-returning methods might need to be rewritten to `async` instead. Initially, emit a warning diagnostic when a Task-returning method without the async keyword is annotated with the attribute
+  - Optionally, the attribute should allow generation of logging code as well. It will require a `_logger` or `logger` field in the class (emit diagnostics if not available), take a logging level as parameter (or use debug as default) and wrap the original methodinto try/catch/finally, logging start, error and end events. Catch should log and `throw`. Activity should be started outside of the try block.
