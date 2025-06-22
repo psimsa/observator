@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -88,7 +89,72 @@ namespace Observator.Generator
                 var span = location.GetLineSpan();
                 source += $"// {method.ContainingType.ToDisplayString()}.{method.Name} called at {span.Path}:{span.StartLinePosition.Line + 1},{span.StartLinePosition.Character + 1}\n";
             }
-            source += "\n// Interceptor code generation will be implemented here.\n";
+
+            // 4. Generate using directives first
+            source += "using System;\nusing System.Runtime.CompilerServices;\n";
+            var classGroups = callSites.GroupBy(cs => cs.method.ContainingType);
+            foreach (var classGroup in classGroups)
+            {
+                var classSymbol = classGroup.Key;
+                var className = classSymbol.Name;
+                var classNamespace = classSymbol.ContainingNamespace.ToDisplayString();
+                // Open namespace
+                source += $"namespace {classNamespace}\n{{\n";
+                // Emit partial class
+                source += $"    public partial class {className}\n    {{\n";
+                int idx = 0;
+                foreach (var (method, location, invocation) in classGroup)
+                {
+                    // TODO: Emit diagnostic if class is not partial
+                    SyntaxNode methodNameNode = null;
+                    if (invocation is InvocationExpressionSyntax invocationExpr)
+                    {
+                        if (invocationExpr.Expression is MemberAccessExpressionSyntax memberAccess)
+                        {
+                            methodNameNode = memberAccess.Name;
+                        }
+                        else if (invocationExpr.Expression is IdentifierNameSyntax identifierName)
+                        {
+                            methodNameNode = identifierName;
+                        }
+                    }
+                    var methodLocation = methodNameNode?.GetLocation() ?? location;
+                    var span = methodLocation.GetLineSpan();
+                    var filePath = span.Path.Replace("\\", "/");
+                    var line = span.StartLinePosition.Line + 1;
+                    var column = span.StartLinePosition.Character + 1;
+                    var methodName = method.Name;
+                    var returnType = method.ReturnType.ToDisplayString();
+                    var paramListString = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
+                    // Add uniqueness to the method name using file, line, and column
+                    var uniqueSuffix = $"_{Path.GetFileNameWithoutExtension(filePath)}_{line}_{column}";
+                    var interceptMethodName = $"{methodName}_Intercepted{uniqueSuffix}";
+                    // Generate the name for the original method (to be renamed by the user or generator in a future step)
+                    var originalMethodName = $"{methodName}_Original";
+                    source += $"        [InterceptsLocation(@\"{filePath}\", {line}, {column})]\n";
+                    source += $"        public {returnType} {interceptMethodName}({paramListString})\n        {{\n";
+                    source += $"            Console.WriteLine(\"Method {methodName} started\");\n";
+                    source += $"            try\n            {{\n";
+                    // Call the original method (assume it will be renamed to _Original)
+                    var callArgs = string.Join(", ", method.Parameters.Select(p => p.Name));
+                    if (returnType != "void")
+                        source += $"                return {originalMethodName}({callArgs});\n";
+                    else
+                        source += $"                {originalMethodName}({callArgs});\n";
+                    source += $"            }}\n            catch (Exception ex)\n            {{\n";
+                    source += $"                Console.WriteLine(\"Exception in method {methodName}: {{0}}\", ex);\n";
+                    source += $"                throw;\n";
+                    source += $"            }}\n            finally\n            {{\n";
+                    source += $"                Console.WriteLine(\"Method {methodName} ended\");\n";
+                    source += $"            }}\n";
+                    if (returnType == "void")
+                        source += $"            return;\n";
+                    source += $"        }}\n";
+                    idx++;
+                }
+                source += "    }\n"; // end class
+                source += "}\n"; // end namespace
+            }
 
             context.AddSource("ObservatorInterceptors.g.cs", SourceText.From(source, System.Text.Encoding.UTF8));
         }

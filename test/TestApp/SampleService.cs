@@ -3,7 +3,7 @@ using System;
 
 namespace TestApp
 {
-    public class SampleService
+    public partial class SampleService
     {
         [ObservatorTrace]
         public string Greet(string name)
