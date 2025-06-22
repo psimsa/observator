@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Observator.Generator.Diagnostics;
 
 namespace Observator.Generator
 {
@@ -19,6 +20,7 @@ namespace Observator.Generator
 
         public void Execute(GeneratorExecutionContext context)
         {
+            var diagContext = new DiagnosticReporterContext(context);
             // 1. Discover all methods decorated with [ObservatorTrace]
             var attributedMethods = new List<(IMethodSymbol symbol, MethodDeclarationSyntax syntax)>();
             var traceAttributeFullName = "Observator.Generated.ObservatorTraceAttribute";
@@ -45,8 +47,14 @@ namespace Observator.Generator
                             if (methodSymbol.IsAbstract)
                             {
                                 // Optionally, emit a diagnostic here for user feedback
-                                // context.ReportDiagnostic(Diagnostic.Create(...));
                                 continue; // Skip abstract methods
+                            }
+                            // OBS001: Method must be in a partial class
+                            var containingType = methodSymbol.ContainingType;
+                            if (!containingType.DeclaringSyntaxReferences.Any(syntaxRef =>
+                                (syntaxRef.GetSyntax() as TypeDeclarationSyntax)?.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) == true))
+                            {
+                                DiagnosticReporter.ReportPartialClass(diagContext, methodSymbol.Name, methodDecl.Identifier.GetLocation());
                             }
                             attributedMethods.Add((methodSymbol, methodDecl));
                             break;
