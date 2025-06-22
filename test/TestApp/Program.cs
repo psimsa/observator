@@ -12,4 +12,7 @@ var sampleService = new TestApp.SampleService();
 var greetResult = sampleService.Greet("World");
 Console.WriteLine($"Greet result: {greetResult}");
 
+var sampleService2 = new TestApp.SampleService();
+var greetResult2 = sampleService2.Greet("Universe");
+
 Console.WriteLine("Test completed successfully!");

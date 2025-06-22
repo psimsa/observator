@@ -20,7 +20,7 @@ namespace Observator.Generator
         public void Execute(GeneratorExecutionContext context)
         {
             // 1. Discover all methods decorated with [ObservatorTrace]
-            var attributedMethods = new List<IMethodSymbol>();
+            var attributedMethods = new List<(IMethodSymbol symbol, MethodDeclarationSyntax syntax)>();
             var traceAttributeFullName = "Observator.Generated.ObservatorTraceAttribute";
             foreach (var syntaxTree in context.Compilation.SyntaxTrees)
             {
@@ -42,7 +42,7 @@ namespace Observator.Generator
                             attrName == "ObservatorTraceAttribute" ||
                             attrName == "ObservatorTrace")
                         {
-                            attributedMethods.Add(methodSymbol);
+                            attributedMethods.Add((methodSymbol, methodDecl));
                             break;
                         }
                     }
@@ -50,7 +50,7 @@ namespace Observator.Generator
             }
 
             // 2. For each attributed method, find all call sites
-            var callSites = new List<(IMethodSymbol method, Location location, SyntaxNode invocation)>();
+            var callSites = new List<(IMethodSymbol method, MethodDeclarationSyntax syntax, Location location, SyntaxNode invocation)>();
             foreach (var syntaxTree in context.Compilation.SyntaxTrees)
             {
                 var semanticModel = context.Compilation.GetSemanticModel(syntaxTree);
@@ -60,13 +60,13 @@ namespace Observator.Generator
                     var symbolInfo = semanticModel.GetSymbolInfo(invocation);
                     var targetMethod = symbolInfo.Symbol as IMethodSymbol;
                     if (targetMethod == null) continue;
-                    foreach (var attributed in attributedMethods)
+                    foreach (var (attributed, syntax) in attributedMethods)
                     {
                         // Compare by original definition and containing type
                         if (SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, attributed.OriginalDefinition) &&
                             SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, attributed.ContainingType))
                         {
-                            callSites.Add((attributed, invocation.GetLocation(), invocation));
+                            callSites.Add((attributed, syntax, invocation.GetLocation(), invocation));
                             break;
                         }
                     }
@@ -78,13 +78,13 @@ namespace Observator.Generator
             source += $"// Trace attribute full name: {traceAttributeFullName}\n";
             source += $"// Attributed methods found: {attributedMethods.Count}\n";
             source += "// Discovered attributed methods:\n";
-            foreach (var method in attributedMethods)
+            foreach (var (method, syntax) in attributedMethods)
             {
                 source += $"// {method.ContainingType.ToDisplayString()}.{method.Name} ({method.Locations.FirstOrDefault()?.GetLineSpan().Path})\n";
             }
             source += $"// Call sites found: {callSites.Count}\n";
             source += "// Discovered call sites:\n";
-            foreach (var (method, location, invocation) in callSites)
+            foreach (var (method, syntax, location, invocation) in callSites)
             {
                 var span = location.GetLineSpan();
                 source += $"// {method.ContainingType.ToDisplayString()}.{method.Name} called at {span.Path}:{span.StartLinePosition.Line + 1},{span.StartLinePosition.Character + 1}\n";
@@ -103,9 +103,11 @@ namespace Observator.Generator
                 // Emit partial class
                 source += $"    public partial class {className}\n    {{\n";
                 int idx = 0;
-                foreach (var (method, location, invocation) in classGroup)
+                // Track which _Original methods have been emitted
+                var emittedOriginals = new HashSet<string>();
+                // Emit interceptors for each call site
+                foreach (var (method, syntax, location, invocation) in classGroup)
                 {
-                    // TODO: Emit diagnostic if class is not partial
                     SyntaxNode methodNameNode = null;
                     if (invocation is InvocationExpressionSyntax invocationExpr)
                     {
@@ -121,21 +123,19 @@ namespace Observator.Generator
                     var methodLocation = methodNameNode?.GetLocation() ?? location;
                     var span = methodLocation.GetLineSpan();
                     var filePath = span.Path.Replace("\\", "/");
-                    var line = span.StartLinePosition.Line + 1;
-                    var column = span.StartLinePosition.Character + 1;
+                    var callLine = span.StartLinePosition.Line + 1;
+                    var callColumn = span.StartLinePosition.Character + 1;
                     var methodName = method.Name;
                     var returnType = method.ReturnType.ToDisplayString();
                     var paramListString = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
                     // Add uniqueness to the method name using file, line, and column
-                    var uniqueSuffix = $"_{Path.GetFileNameWithoutExtension(filePath)}_{line}_{column}";
+                    var uniqueSuffix = $"_{Path.GetFileNameWithoutExtension(filePath)}_{callLine}_{callColumn}";
                     var interceptMethodName = $"{methodName}_Intercepted{uniqueSuffix}";
-                    // Generate the name for the original method (to be renamed by the user or generator in a future step)
                     var originalMethodName = $"{methodName}_Original";
-                    source += $"        [InterceptsLocation(@\"{filePath}\", {line}, {column})]\n";
+                    source += $"        [InterceptsLocation(@\"{filePath}\", {callLine}, {callColumn})]\n";
                     source += $"        public {returnType} {interceptMethodName}({paramListString})\n        {{\n";
                     source += $"            Console.WriteLine(\"Method {methodName} started\");\n";
                     source += $"            try\n            {{\n";
-                    // Call the original method (assume it will be renamed to _Original)
                     var callArgs = string.Join(", ", method.Parameters.Select(p => p.Name));
                     if (returnType != "void")
                         source += $"                return {originalMethodName}({callArgs});\n";
@@ -151,6 +151,34 @@ namespace Observator.Generator
                         source += $"            return;\n";
                     source += $"        }}\n";
                     idx++;
+                }
+                // Emit _Original methods only once per attributed method
+                var attributedInClass = attributedMethods.Where(x => SymbolEqualityComparer.Default.Equals(x.symbol.ContainingType, classSymbol));
+                foreach (var (method, syntax) in attributedInClass)
+                {
+                    var methodName = method.Name;
+                    if (emittedOriginals.Contains(methodName))
+                        continue;
+                    emittedOriginals.Add(methodName);
+                    var returnType = method.ReturnType.ToDisplayString();
+                    var paramListString = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
+                    source += $"        private {returnType} {methodName}_Original({paramListString})\n        {{\n";
+                    if (syntax.Body != null)
+                    {
+                        var bodyText = syntax.Body.ToFullString();
+                        var indentedBody = string.Join("\n", bodyText.Split('\n').Select(line => "            " + line));
+                        source += indentedBody + "\n";
+                    }
+                    else if (syntax.ExpressionBody != null)
+                    {
+                        var exprText = syntax.ExpressionBody.ToFullString();
+                        source += $"            return {exprText.Substring(2).TrimEnd(';')};\n";
+                    }
+                    else
+                    {
+                        source += $"            throw new NotImplementedException(\"Original method body not found.\");\n";
+                    }
+                    source += $"        }}\n";
                 }
                 source += "    }\n"; // end class
                 source += "}\n"; // end namespace
