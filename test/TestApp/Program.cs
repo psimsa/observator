@@ -1,2 +1,11 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using System;
+using Observator.Generated;
+
+// See https://aka.ms/new-console-template for more information
+Console.WriteLine("=== Observator Test App ===");
+Console.WriteLine($"ActivitySource Name: {ObservatorInfrastructure.ActivitySourceName}");
+Console.WriteLine($"ActivitySource Version: {ObservatorInfrastructure.Version}");
+Console.WriteLine($"ActivitySource Instance: {ObservatorInfrastructure.ActivitySource}");
+Console.WriteLine($"Meter Instance: {ObservatorInfrastructure.Meter}");
+
+Console.WriteLine("Test completed successfully!");
