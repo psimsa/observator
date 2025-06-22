@@ -38,10 +38,16 @@ namespace Observator.Generator
                         if (attrClass == null) continue;
                         var attrName = attrClass.Name;
                         var attrFullName = attrClass.ToDisplayString();
-                        if (attrFullName == traceAttributeFullName ||
+                        if ((attrFullName == traceAttributeFullName ||
                             attrName == "ObservatorTraceAttribute" ||
-                            attrName == "ObservatorTrace")
+                            attrName == "ObservatorTrace"))
                         {
+                            if (methodSymbol.IsAbstract)
+                            {
+                                // Optionally, emit a diagnostic here for user feedback
+                                // context.ReportDiagnostic(Diagnostic.Create(...));
+                                continue; // Skip abstract methods
+                            }
                             attributedMethods.Add((methodSymbol, methodDecl));
                             break;
                         }

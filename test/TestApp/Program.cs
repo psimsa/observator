@@ -16,3 +16,17 @@ var sampleService2 = new TestApp.SampleService();
 var greetResult2 = sampleService2.Greet("Universe");
 
 Console.WriteLine("Test completed successfully!");
+
+// Expression-bodied method
+var greetExpr = sampleService.GreetExpression("EdgeCase");
+Console.WriteLine($"GreetExpression result: {greetExpr}");
+
+// Interface call
+TestApp.ISampleService iface = sampleService;
+var greetIface = iface.GreetViaInterface("Interface");
+Console.WriteLine($"GreetViaInterface result: {greetIface}");
+
+// Abstract/override call
+TestApp.AbstractSampleService abs = sampleService;
+var greetAbs = abs.GreetAbstract("Abstract");
+Console.WriteLine($"GreetAbstract result: {greetAbs}");
