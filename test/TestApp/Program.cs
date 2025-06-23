@@ -1,5 +1,13 @@
 ﻿using System;
 using Observator.Generated;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+
+var tracerProvider = Sdk.CreateTracerProviderBuilder()
+    .AddSource(ObservatorInfrastructure.ActivitySourceName)
+    // The rest of your setup code goes here
+    .AddConsoleExporter()
+    .Build();
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("=== Observator Test App ===");

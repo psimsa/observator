@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Observator.Generator.Diagnostics;
+using System.Diagnostics;
 
 namespace Observator.Generator
 {
@@ -193,19 +194,15 @@ namespace Observator.Generator
             var returnPrefix = isAsync || !string.IsNullOrEmpty(args) ? "return " : "";
             var result = new System.Text.StringBuilder();
             result.AppendLine("    {");
-            result.AppendLine($"        System.Console.WriteLine(\"[Observator] {methodName} started\");");
+            result.AppendLine($"        using var activity = Observator.Generated.ObservatorInfrastructure.ActivitySource.StartActivity(\"{methodName}\");");
             result.AppendLine("        try");
             result.AppendLine("        {");
             result.AppendLine($"            {returnPrefix}{awaitPrefix}this.{cloneName}({args});");
             result.AppendLine("        }");
             result.AppendLine("        catch (Exception ex)");
             result.AppendLine("        {");
-            result.AppendLine($"            System.Console.WriteLine($\"[Observator] {methodName} exception: {{ex}}\");");
+            result.AppendLine("            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);");
             result.AppendLine("            throw;");
-            result.AppendLine("        }");
-            result.AppendLine("        finally");
-            result.AppendLine("        {");
-            result.AppendLine($"            System.Console.WriteLine(\"[Observator] {methodName} ended\");");
             result.AppendLine("        }");
             result.AppendLine("    }");
             return result.ToString();
