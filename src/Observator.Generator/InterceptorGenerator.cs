@@ -200,7 +200,7 @@ namespace Observator.Generator
             result.AppendLine("        }");
             result.AppendLine("        catch (Exception ex)");
             result.AppendLine("        {");
-            result.AppendLine($"            System.Console.WriteLine(\"[Observator] {methodName} exception: {{ex}}\");");
+            result.AppendLine($"            System.Console.WriteLine($\"[Observator] {methodName} exception: {{ex}}\");");
             result.AppendLine("            throw;");
             result.AppendLine("        }");
             result.AppendLine("        finally");

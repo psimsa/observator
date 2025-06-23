@@ -30,3 +30,13 @@ Console.WriteLine($"GreetViaInterface result: {greetIface}");
 TestApp.AbstractSampleService abs = sampleService;
 var greetAbs = abs.GreetAbstract("Abstract");
 Console.WriteLine($"GreetAbstract result: {greetAbs}");
+
+// Exception handling
+try
+{
+    var exceptionResult = sampleService.GreetWithException("Test");
+}
+catch (NotImplementedException ex)
+{
+    Console.WriteLine($"Caught expected exception: {ex.Message}");
+}
