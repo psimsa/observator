@@ -2,7 +2,7 @@ using Observator.Generated;
 
 namespace TestApp;
 
-public partial class AnotherService
+public class AnotherService
 {
     [ObservatorTrace]
     public string AnotherMethod(string input)
