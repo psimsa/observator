@@ -150,7 +150,6 @@ namespace Observator.Generator
                         var asyncModifier = isAsync ? "async " : "";
                         var awaitPrefix = isAsync ? "await " : "";
                         var isIterator = callList[0].syntax.DescendantNodes().OfType<YieldStatementSyntax>().Any();
-                        var iteratorModifier = isIterator ? "" : ""; // C# does not have a 'iterator' keyword, but yield usage is preserved in the body
                         // Emit a private clone of the original method (actual body)
                         var cloneName = methodName + "_Clone";
                         sb.AppendLine($"    private {asyncModifier}{returnType} {cloneName}({parameters})");
