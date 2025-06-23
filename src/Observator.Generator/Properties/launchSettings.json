@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Interceptor Generator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\test\\TestApp\\TestApp.csproj"
+    }
+  }
+}
