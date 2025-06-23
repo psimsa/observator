@@ -55,6 +55,26 @@ public class InterceptorGenerator : IIncrementalGenerator
 }
 ```
 
+## Current Progress (as of June 23, 2025)
+
+- The generator project (`Observator.Generator`) is fully migrated to use the .NET 9 incremental generator API (`IIncrementalGenerator`).
+- Both `InterceptorGenerator` and `InfrastructureGenerator` now use incremental pipelines and the new Roslyn APIs.
+- The generator emits interceptors using the `[InterceptsLocation(int, string)]` attribute, compatible with the new Roslyn interceptors API.
+- For each `[ObservatorTrace]`-annotated method, the generator emits:
+  - A private `_Clone` method intended to contain the original method body.
+  - An internal interceptor method with the `[InterceptsLocation]` attribute, which calls the `_Clone` method and adds observability logic.
+- Diagnostic reporting is migrated to the incremental pipeline.
+- The generator emits correct attribute signatures and supports the new `InterceptableLocation.Data` pattern.
+- The build succeeds and the generator emits valid code, but the `_Clone` methods currently contain only a `NotImplementedException` placeholder.
+- **Next step:** Implement logic to extract and emit the actual method body (block or expression-bodied) into the `_Clone` method for each intercepted method, ensuring all constructs are handled.
+
+## Planned Diagnostics
+
+- **Struct Parameter Warning:**
+  - If a method annotated with `[ObservatorTrace]` has any parameters of a `struct` type (value type), emit a warning diagnostic.
+  - Rationale: Value-based parameters may cause unnecessary copying or overallocation when intercepted, which can impact performance or correctness.
+  - This diagnostic is not yet implemented, but should be considered for future releases.
+
 ## Next Steps
 - Refactor `InterceptorGenerator` and `InfrastructureGenerator` to use the incremental generator pattern.
 - Update diagnostics and code generation logic to use the new context and APIs.

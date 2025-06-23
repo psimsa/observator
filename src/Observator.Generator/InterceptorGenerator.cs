@@ -11,194 +11,205 @@ using Observator.Generator.Diagnostics;
 namespace Observator.Generator
 {
     [Generator]
-    public class InterceptorGenerator : ISourceGenerator
+    public class InterceptorGenerator : IIncrementalGenerator
     {
-        public void Initialize(GeneratorInitializationContext context)
+        public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // No initialization required for now
+            // Find all method declarations with [ObservatorTrace]
+            var attributedMethods = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => node is MethodDeclarationSyntax,
+                    transform: (ctx, ct) =>
+                    {
+                        var methodDecl = (MethodDeclarationSyntax)ctx.Node;
+                        var model = ctx.SemanticModel;
+                        var methodSymbol = model.GetDeclaredSymbol(methodDecl, ct) as IMethodSymbol;
+                        if (methodSymbol == null) return (null, null, (Diagnostic)null);
+                        var traceAttr = methodSymbol.GetAttributes().FirstOrDefault(attr =>
+                            attr.AttributeClass?.ToDisplayString() == "Observator.Generated.ObservatorTraceAttribute" ||
+                            attr.AttributeClass?.Name == "ObservatorTraceAttribute" ||
+                            attr.AttributeClass?.Name == "ObservatorTrace");
+                        if (traceAttr == null) return (null, null, (Diagnostic)null);
+                        if (methodSymbol.IsAbstract) return (null, null, (Diagnostic)null);
+                        // OBS001: Method must be in a partial class
+                        var containingType = methodSymbol.ContainingType;
+                        if (!containingType.DeclaringSyntaxReferences.Any(syntaxRef =>
+                            (syntaxRef.GetSyntax(ct) as TypeDeclarationSyntax)?.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) == true))
+                        {
+                            // Report diagnostic via pipeline (see below)
+                            return (methodSymbol, methodDecl, Diagnostic.Create(
+                                DiagnosticDescriptors.OBS001_PartialClass,
+                                methodDecl.Identifier.GetLocation(),
+                                methodSymbol.Name));
+                        }
+                        return (methodSymbol, methodDecl, (Diagnostic)null);
+                    })
+                .Where(x => x.Item1 != null)
+                .Select((x, _) => x);
+
+            var callSites = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) => node is InvocationExpressionSyntax,
+                    transform: (ctx, ct) =>
+                    {
+                        var invocation = (InvocationExpressionSyntax)ctx.Node;
+                        var model = ctx.SemanticModel;
+                        var symbolInfo = model.GetSymbolInfo(invocation, ct);
+                        var targetMethod = symbolInfo.Symbol as IMethodSymbol;
+                        if (targetMethod == null) return (null, null, null);
+                        // Use the new interceptors API
+                        var interceptableLocation = model.GetInterceptableLocation(invocation, ct);
+                        if (interceptableLocation == null)
+                            return (null, null, null);
+                        return (invocation, targetMethod, interceptableLocation);
+                    })
+                .Where(x => x.Item1 != null && x.Item2 != null && x.Item3 != null)
+                .Select((x, _) => x);
+
+            // Combine attributed methods and call sites for code generation
+            var combined = attributedMethods.Collect().Combine(callSites.Collect());
+
+            context.RegisterSourceOutput(combined, (spc, tuple) =>
+            {
+                var attributedMethodsArr = tuple.Left;
+                var callSitesArr = tuple.Right;
+                foreach (var entry in attributedMethodsArr)
+                {
+                    var methodSymbol = entry.Item1;
+                    var methodDecl = entry.Item2;
+                    var diagnostic = entry.Item3;
+                    if (diagnostic != null)
+                        spc.ReportDiagnostic(diagnostic);
+                }
+                var validMethods = attributedMethodsArr.Where(x => x.Item3 == null && x.Item1 != null && x.Item2 != null).ToList();
+                // Update callSiteInfos to include InterceptableLocation
+                var callSiteInfos = new List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location)>();
+                foreach (var callEntry in callSitesArr)
+                {
+                    var invocation = (InvocationExpressionSyntax)callEntry.Item1;
+                    var targetMethod = (IMethodSymbol)callEntry.Item2;
+                    var location = (InterceptableLocation)callEntry.Item3;
+                    foreach (var validEntry in validMethods)
+                    {
+                        var methodSymbol = validEntry.Item1;
+                        var methodDecl = validEntry.Item2;
+                        if (SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition) &&
+                            SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType))
+                        {
+                            callSiteInfos.Add((methodSymbol, methodDecl, invocation, location));
+                            break;
+                        }
+                    }
+                }
+                // Group call sites by containing class and method signature (as strings)
+                var interceptorsByClassAndMethod = new Dictionary<(string className, string methodSig), List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location)>>();
+                foreach (var call in callSiteInfos)
+                {
+                    var method = call.method;
+                    var syntax = call.syntax;
+                    var invocation = call.invocation;
+                    var location = call.location;
+                    var containingType = method.ContainingType;
+                    var className = containingType.ToDisplayString();
+                    var methodSig = method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var key = (className, methodSig);
+                    if (!interceptorsByClassAndMethod.TryGetValue(key, out var list))
+                    {
+                        list = new List<(IMethodSymbol, MethodDeclarationSyntax, InvocationExpressionSyntax, InterceptableLocation)>();
+                        interceptorsByClassAndMethod[key] = list;
+                    }
+                    list.Add((method, syntax, invocation, location));
+                }
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("// <auto-generated />");
+                // Group by class for emission
+                var classGroups = interceptorsByClassAndMethod.GroupBy(kvp => kvp.Key.className);
+                foreach (var classGroup in classGroups)
+                {
+                    var className = classGroup.Key;
+                    // Find the namespace from the first method in the group
+                    var firstMethod = classGroup.First().Value[0].method;
+                    var ns = firstMethod.ContainingType.ContainingNamespace?.ToDisplayString() ?? "";
+                    if (!string.IsNullOrEmpty(ns))
+                    {
+                        sb.AppendLine($"namespace {ns}");
+                        sb.AppendLine("{");
+                    }
+                    sb.AppendLine($"partial class {firstMethod.ContainingType.Name}");
+                    sb.AppendLine("{");
+                    foreach (var methodGroup in classGroup)
+                    {
+                        var callList = methodGroup.Value;
+                        var method = callList[0].method;
+                        var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        var methodName = method.Name;
+                        var parameters = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} {p.Name}"));
+                        var args = string.Join(", ", method.Parameters.Select(p => p.Name));
+                        var isAsync = method.ReturnType.Name == "Task" || method.ReturnType.Name == "ValueTask";
+                        var asyncModifier = isAsync ? "async " : "";
+                        var awaitPrefix = isAsync ? "await " : "";
+                        var isIterator = callList[0].syntax.DescendantNodes().OfType<YieldStatementSyntax>().Any();
+                        var iteratorModifier = isIterator ? "" : ""; // C# does not have a 'iterator' keyword, but yield usage is preserved in the body
+                        // Emit a private clone of the original method (actual body)
+                        var cloneName = methodName + "_Clone";
+                        sb.AppendLine($"    private {asyncModifier}{returnType} {cloneName}({parameters})");
+                        if (callList[0].syntax.Body != null)
+                        {
+                            // Block body: copy exactly
+                            sb.AppendLine(callList[0].syntax.Body.ToFullString());
+                        }
+                        else if (callList[0].syntax.ExpressionBody != null)
+                        {
+                            // Expression-bodied
+                            sb.AppendLine($"    {{ return {callList[0].syntax.ExpressionBody.Expression.ToFullString()}; }}");
+                        }
+                        else
+                        {
+                            sb.AppendLine("    { throw new System.NotImplementedException(); }");
+                        }
+                        // Emit the interceptor method with InterceptsLocation attribute(s)
+                        foreach (var (_, _, _, location) in callList)
+                        {
+                            sb.AppendLine($"    [System.Runtime.CompilerServices.InterceptsLocation(1, \"{location.Data}\")]" );
+                        }
+                        var interceptorName = methodName + "_Interceptor";
+                        sb.AppendLine($"    internal {asyncModifier}{returnType} {interceptorName}({parameters})");
+                        sb.AppendLine(GenerateInterceptorBody(methodName, cloneName, args, isAsync));
+                    }
+                    sb.AppendLine("}");
+                    if (!string.IsNullOrEmpty(ns))
+                    {
+                        sb.AppendLine("}");
+                    }
+                }
+                spc.AddSource("ObservatorInterceptors.g.cs", SourceText.From(sb.ToString(), System.Text.Encoding.UTF8));
+            });
         }
 
-        public void Execute(GeneratorExecutionContext context)
+        // Helper for interceptor body
+        private static string GenerateInterceptorBody(string methodName, string cloneName, string args, bool isAsync)
         {
-            var diagContext = new DiagnosticReporterContext(context);
-            // 1. Discover all methods decorated with [ObservatorTrace]
-            var attributedMethods = new List<(IMethodSymbol symbol, MethodDeclarationSyntax syntax)>();
-            var traceAttributeFullName = "Observator.Generated.ObservatorTraceAttribute";
-            foreach (var syntaxTree in context.Compilation.SyntaxTrees)
-            {
-                var semanticModel = context.Compilation.GetSemanticModel(syntaxTree);
-                var methodDeclarations = syntaxTree.GetRoot()
-                    .DescendantNodes()
-                    .OfType<MethodDeclarationSyntax>();
-                foreach (var methodDecl in methodDeclarations)
-                {
-                    var methodSymbol = semanticModel.GetDeclaredSymbol(methodDecl) as IMethodSymbol;
-                    if (methodSymbol == null) continue;
-                    foreach (var attr in methodSymbol.GetAttributes())
-                    {
-                        var attrClass = attr.AttributeClass;
-                        if (attrClass == null) continue;
-                        var attrName = attrClass.Name;
-                        var attrFullName = attrClass.ToDisplayString();
-                        if ((attrFullName == traceAttributeFullName ||
-                            attrName == "ObservatorTraceAttribute" ||
-                            attrName == "ObservatorTrace"))
-                        {
-                            if (methodSymbol.IsAbstract)
-                            {
-                                // Optionally, emit a diagnostic here for user feedback
-                                continue; // Skip abstract methods
-                            }
-                            // OBS001: Method must be in a partial class
-                            var containingType = methodSymbol.ContainingType;
-                            if (!containingType.DeclaringSyntaxReferences.Any(syntaxRef =>
-                                (syntaxRef.GetSyntax() as TypeDeclarationSyntax)?.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) == true))
-                            {
-                                DiagnosticReporter.ReportPartialClass(diagContext, methodSymbol.Name, methodDecl.Identifier.GetLocation());
-                            }
-                            attributedMethods.Add((methodSymbol, methodDecl));
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // 2. For each attributed method, find all call sites
-            var callSites = new List<(IMethodSymbol method, MethodDeclarationSyntax syntax, Location location, SyntaxNode invocation)>();
-            foreach (var syntaxTree in context.Compilation.SyntaxTrees)
-            {
-                var semanticModel = context.Compilation.GetSemanticModel(syntaxTree);
-                var invocations = syntaxTree.GetRoot().DescendantNodes().OfType<InvocationExpressionSyntax>();
-                foreach (var invocation in invocations)
-                {
-                    var symbolInfo = semanticModel.GetSymbolInfo(invocation);
-                    var targetMethod = symbolInfo.Symbol as IMethodSymbol;
-                    if (targetMethod == null) continue;
-                    foreach (var (attributed, syntax) in attributedMethods)
-                    {
-                        // Compare by original definition and containing type
-                        if (SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, attributed.OriginalDefinition) &&
-                            SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, attributed.ContainingType))
-                        {
-                            callSites.Add((attributed, syntax, invocation.GetLocation(), invocation));
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // 3. Output discovered methods and call sites as a comment in generated code
-            var source = "// <auto-generated />\n";
-            source += $"// Trace attribute full name: {traceAttributeFullName}\n";
-            source += $"// Attributed methods found: {attributedMethods.Count}\n";
-            source += "// Discovered attributed methods:\n";
-            foreach (var (method, syntax) in attributedMethods)
-            {
-                source += $"// {method.ContainingType.ToDisplayString()}.{method.Name} ({method.Locations.FirstOrDefault()?.GetLineSpan().Path})\n";
-            }
-            source += $"// Call sites found: {callSites.Count}\n";
-            source += "// Discovered call sites:\n";
-            foreach (var (method, syntax, location, invocation) in callSites)
-            {
-                var span = location.GetLineSpan();
-                source += $"// {method.ContainingType.ToDisplayString()}.{method.Name} called at {span.Path}:{span.StartLinePosition.Line + 1},{span.StartLinePosition.Character + 1}\n";
-            }
-
-            // 4. Generate using directives first
-            source += "using System;\nusing System.Runtime.CompilerServices;\n";
-            var classGroups = callSites.GroupBy(cs => cs.method.ContainingType);
-            foreach (var classGroup in classGroups)
-            {
-                var classSymbol = classGroup.Key;
-                var className = classSymbol.Name;
-                var classNamespace = classSymbol.ContainingNamespace.ToDisplayString();
-                // Open namespace
-                source += $"namespace {classNamespace}\n{{\n";
-                // Emit partial class
-                source += $"    public partial class {className}\n    {{\n";
-                int idx = 0;
-                // Track which _Original methods have been emitted
-                var emittedOriginals = new HashSet<string>();
-                // Emit interceptors for each call site
-                foreach (var (method, syntax, location, invocation) in classGroup)
-                {
-                    SyntaxNode methodNameNode = null;
-                    if (invocation is InvocationExpressionSyntax invocationExpr)
-                    {
-                        if (invocationExpr.Expression is MemberAccessExpressionSyntax memberAccess)
-                        {
-                            methodNameNode = memberAccess.Name;
-                        }
-                        else if (invocationExpr.Expression is IdentifierNameSyntax identifierName)
-                        {
-                            methodNameNode = identifierName;
-                        }
-                    }
-                    var methodLocation = methodNameNode?.GetLocation() ?? location;
-                    var span = methodLocation.GetLineSpan();
-                    var filePath = span.Path.Replace("\\", "/");
-                    var callLine = span.StartLinePosition.Line + 1;
-                    var callColumn = span.StartLinePosition.Character + 1;
-                    var methodName = method.Name;
-                    var returnType = method.ReturnType.ToDisplayString();
-                    var paramListString = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
-                    // Add uniqueness to the method name using file, line, and column
-                    var uniqueSuffix = $"_{Path.GetFileNameWithoutExtension(filePath)}_{callLine}_{callColumn}";
-                    var interceptMethodName = $"{methodName}_Intercepted{uniqueSuffix}";
-                    var originalMethodName = $"{methodName}_Original";
-                    source += $"        [InterceptsLocation(@\"{filePath}\", {callLine}, {callColumn})]\n";
-                    source += $"        public {returnType} {interceptMethodName}({paramListString})\n        {{\n";
-                    source += $"            Console.WriteLine(\"Method {methodName} started\");\n";
-                    source += $"            try\n            {{\n";
-                    var callArgs = string.Join(", ", method.Parameters.Select(p => p.Name));
-                    if (returnType != "void")
-                        source += $"                return {originalMethodName}({callArgs});\n";
-                    else
-                        source += $"                {originalMethodName}({callArgs});\n";
-                    source += $"            }}\n            catch (Exception ex)\n            {{\n";
-                    source += $"                Console.WriteLine(\"Exception in method {methodName}: {{0}}\", ex);\n";
-                    source += $"                throw;\n";
-                    source += $"            }}\n            finally\n            {{\n";
-                    source += $"                Console.WriteLine(\"Method {methodName} ended\");\n";
-                    source += $"            }}\n";
-                    if (returnType == "void")
-                        source += $"            return;\n";
-                    source += $"        }}\n";
-                    idx++;
-                }
-                // Emit _Original methods only once per attributed method
-                var attributedInClass = attributedMethods.Where(x => SymbolEqualityComparer.Default.Equals(x.symbol.ContainingType, classSymbol));
-                foreach (var (method, syntax) in attributedInClass)
-                {
-                    var methodName = method.Name;
-                    if (emittedOriginals.Contains(methodName))
-                        continue;
-                    emittedOriginals.Add(methodName);
-                    var returnType = method.ReturnType.ToDisplayString();
-                    var paramListString = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
-                    source += $"        private {returnType} {methodName}_Original({paramListString})\n        {{\n";
-                    if (syntax.Body != null)
-                    {
-                        var bodyText = syntax.Body.ToFullString();
-                        var indentedBody = string.Join("\n", bodyText.Split('\n').Select(line => "            " + line));
-                        source += indentedBody + "\n";
-                    }
-                    else if (syntax.ExpressionBody != null)
-                    {
-                        var exprText = syntax.ExpressionBody.ToFullString();
-                        source += $"            return {exprText.Substring(2).TrimEnd(';')};\n";
-                    }
-                    else
-                    {
-                        source += $"            throw new NotImplementedException(\"Original method body not found.\");\n";
-                    }
-                    source += $"        }}\n";
-                }
-                source += "    }\n"; // end class
-                source += "}\n"; // end namespace
-            }
-
-            context.AddSource("ObservatorInterceptors.g.cs", SourceText.From(source, System.Text.Encoding.UTF8));
+            var awaitPrefix = isAsync ? "await " : "";
+            var returnPrefix = isAsync || !string.IsNullOrEmpty(args) ? "return " : "";
+            var result = new System.Text.StringBuilder();
+            result.AppendLine("    {");
+            result.AppendLine($"        System.Console.WriteLine(\"[Observator] {methodName} started\");");
+            result.AppendLine("        try");
+            result.AppendLine("        {");
+            result.AppendLine($"            {returnPrefix}{awaitPrefix}this.{cloneName}({args});");
+            result.AppendLine("        }");
+            result.AppendLine("        catch (Exception ex)");
+            result.AppendLine("        {");
+            result.AppendLine($"            System.Console.WriteLine(\"[Observator] {methodName} exception: {{ex}}\");");
+            result.AppendLine("            throw;");
+            result.AppendLine("        }");
+            result.AppendLine("        finally");
+            result.AppendLine("        {");
+            result.AppendLine($"            System.Console.WriteLine(\"[Observator] {methodName} ended\");");
+            result.AppendLine("        }");
+            result.AppendLine("    }");
+            return result.ToString();
         }
     }
 }

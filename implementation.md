@@ -126,11 +126,55 @@ This phase will add Roslyn diagnostics to improve developer experience and guide
 | OBS006               | [ObservatorTrace] on method with unsupported signature (e.g., ref/out)       | When an attributed method uses unsupported parameter types         |
 | OBS007               | DI registration detected for interface with [ObservatorTrace]                | When DI registration is found for an interface with annotation     |
 | OBS008               | [ObservatorTrace] on method with no body (e.g., extern, partial, abstract)   | When an attributed method has no body to copy                      |
+| OBS009               | [ObservatorTrace] on method with struct parameter (allocation warning)       | When an attributed method has any struct (value type) parameter    |
 
-These diagnostics will help users:
-- Ensure correct usage of attributes and partial classes
-- Avoid unsupported or ambiguous scenarios
-- Get guidance for interface and DI interception patterns
-- Understand async and advanced method signature limitations
+These diagnostics help ensure correct usage, avoid unsupported scenarios, and guide users toward best practices for AOT-friendly interception and instrumentation.
 
-Diagnostics will be implemented using Roslyn's `context.ReportDiagnostic` API in the generator.
+---
+
+### Planned Features
+
+- **Logger Detection and Usage:**
+  - When generating observability code for an annotated method, the generator should attempt to detect if the containing class has a logger field or property using common patterns (e.g., `log`, `_log`, `_logger`, `logger`).
+  - If a logger is found, use it for logging instead of `Console`.
+  - If no logger is found, fall back to using `Console` as currently implemented.
+  - This feature is not yet implemented, but is planned to improve integration with existing logging infrastructure and developer experience.
+
+## Current State
+
+### Generator
+- The generator is implemented as a .NET 9 incremental source generator (`IIncrementalGenerator`) and uses the new Roslyn interceptors API.
+- For each `[ObservatorTrace]`-annotated method, the generator emits:
+  - A private `_Clone` method containing the original method body (block or expression-bodied, with async/iterator support in progress).
+  - An internal interceptor method with `[InterceptsLocation]` that wraps the clone call in a try/catch/finally block, logging method start, exception, and end.
+  - The interceptor body structure is externalized for future customization.
+- The generator supports most C# method constructs and is ready for further extension.
+
+### Test Application
+- The test app (`TestApp`) includes coverage for:
+  - Block-bodied and expression-bodied methods
+  - Iterator methods
+  - Async iterator methods
+  - Async Task methods
+  - Task-returning methods (non-async)
+  - Methods with `ref`/`out` parameters
+  - Methods with `struct` parameters (for future diagnostics)
+- The build is successful and generated code is valid for all supported patterns.
+
+---
+
+### Diagnostics (Planned and Implemented)
+
+| Diagnostic ID         | Description                                                                 | When Emitted                                                      |
+|----------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------|
+| OBS001               | Method annotated with [ObservatorTrace] is not in a partial class            | When an attributed method is found in a non-partial class          |
+| OBS002               | [ObservatorTrace] attribute applied to an abstract method                    | When an abstract method is annotated (no interception possible)    |
+| OBS003               | [ObservatorTrace] attribute applied to an interface method (proxy required)  | When an interface method is annotated (suggest proxy generation or moving logic to a private method)   |
+| OBS004               | Multiple methods with the same signature and [ObservatorTrace] in one class  | When duplicate attributed methods are found in a class             |
+| OBS005               | [ObservatorTrace] on async/Task-returning method (async support warning)     | When an attributed method is async or returns Task/ValueTask       |
+| OBS006               | [ObservatorTrace] on method with unsupported signature (e.g., ref/out)       | When an attributed method uses unsupported parameter types         |
+| OBS007               | DI registration detected for interface with [ObservatorTrace]                | When DI registration is found for an interface with annotation     |
+| OBS008               | [ObservatorTrace] on method with no body (e.g., extern, partial, abstract)   | When an attributed method has no body to copy                      |
+| OBS009               | [ObservatorTrace] on method with struct parameter (allocation warning)       | When an attributed method has any struct (value type) parameter    |
+
+These diagnostics help ensure correct usage, avoid unsupported scenarios, and guide users toward best practices for AOT-friendly interception and instrumentation.

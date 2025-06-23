@@ -11,32 +11,31 @@ using Microsoft.CodeAnalysis.Text;
 namespace Observator.Generator
 {
     [Generator]
-    public class InfrastructureGenerator : ISourceGenerator
+    public class InfrastructureGenerator : IIncrementalGenerator
     {
-        public void Initialize(GeneratorInitializationContext context)
+        public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // No initialization required for now
-        }
-
-        public void Execute(GeneratorExecutionContext context)
-        {
-            var (assemblyName, version) = GetAssemblyInfo(context);
-            var source = GenerateInfrastructureSource(assemblyName, version);
-            context.AddSource("ObservatorInfrastructure.g.cs", SourceText.From(source, Encoding.UTF8));
-        }
-
-        private (string Name, string Version) GetAssemblyInfo(GeneratorExecutionContext context)
-        {
-            var assemblyName = context.Compilation.AssemblyName ?? "Unknown";
-            var version = "1.0.0.0";
-            var versionAttr = context.Compilation.Assembly
-                .GetAttributes()
-                .FirstOrDefault(a => a.AttributeClass?.Name == "AssemblyVersionAttribute");
-            if (versionAttr != null && versionAttr.ConstructorArguments.Length > 0)
+            // Use the compilation provider to get assembly info
+            var assemblyInfo = context.CompilationProvider.Select((compilation, _) =>
             {
-                version = versionAttr.ConstructorArguments[0].Value?.ToString() ?? version;
-            }
-            return (assemblyName, version);
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
+                var version = "1.0.0.0";
+                var versionAttr = compilation.Assembly
+                    .GetAttributes()
+                    .FirstOrDefault(a => a.AttributeClass?.Name == "AssemblyVersionAttribute");
+                if (versionAttr != null && versionAttr.ConstructorArguments.Length > 0)
+                {
+                    version = versionAttr.ConstructorArguments[0].Value?.ToString() ?? version;
+                }
+                return (assemblyName, version);
+            });
+
+            context.RegisterSourceOutput(assemblyInfo, (spc, tuple) =>
+            {
+                var (assemblyName, version) = tuple;
+                var source = GenerateInfrastructureSource(assemblyName, version);
+                spc.AddSource("ObservatorInfrastructure.g.cs", SourceText.From(source, Encoding.UTF8));
+            });
         }
 
         private string GenerateInfrastructureSource(string assemblyName, string version)
@@ -52,7 +51,7 @@ namespace System.Runtime.CompilerServices
     [System.AttributeUsage(System.AttributeTargets.Method, AllowMultiple = true)]
     public sealed class InterceptsLocationAttribute : Attribute
     {{
-        public InterceptsLocationAttribute(string filePath, int line, int column) {{ }}
+        public InterceptsLocationAttribute(int version, string data) {{ }}
     }}
 }}
 
