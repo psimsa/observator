@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Observator.Generated;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,9 @@ namespace TestApp
 {
     public partial class EdgeCases
     {
+        private readonly ILogger<EdgeCases> _logger;
+        public EdgeCases(ILogger<EdgeCases> logger) => _logger = logger;
+
         // Iterator method
         [ObservatorTrace]
         public IEnumerable<int> GetNumbers(int count)

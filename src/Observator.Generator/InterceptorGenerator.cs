@@ -25,25 +25,31 @@ namespace Observator.Generator
                         var methodDecl = (MethodDeclarationSyntax)ctx.Node;
                         var model = ctx.SemanticModel;
                         var methodSymbol = model.GetDeclaredSymbol(methodDecl, ct) as IMethodSymbol;
-                        if (methodSymbol == null) return (null, null, (Diagnostic)null);
+                        if (methodSymbol == null) return (null, null, null, (Diagnostic)null);
                         var traceAttr = methodSymbol.GetAttributes().FirstOrDefault(attr =>
                             attr.AttributeClass?.ToDisplayString() == "Observator.Generated.ObservatorTraceAttribute" ||
                             attr.AttributeClass?.Name == "ObservatorTraceAttribute" ||
                             attr.AttributeClass?.Name == "ObservatorTrace");
-                        if (traceAttr == null) return (null, null, (Diagnostic)null);
-                        if (methodSymbol.IsAbstract) return (null, null, (Diagnostic)null);
+                        if (traceAttr == null) return (null, null, null, (Diagnostic)null);
+                        if (methodSymbol.IsAbstract) return (null, null, null, (Diagnostic)null);
                         // OBS001: Method must be in a partial class
                         var containingType = methodSymbol.ContainingType;
                         if (!containingType.DeclaringSyntaxReferences.Any(syntaxRef =>
                             (syntaxRef.GetSyntax(ct) as TypeDeclarationSyntax)?.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) == true))
                         {
                             // Report diagnostic via pipeline (see below)
-                            return (methodSymbol, methodDecl, Diagnostic.Create(
+                            return (methodSymbol, methodDecl, null, Diagnostic.Create(
                                 DiagnosticDescriptors.OBS001_PartialClass,
                                 methodDecl.Identifier.GetLocation(),
                                 methodSymbol.Name));
                         }
-                        return (methodSymbol, methodDecl, (Diagnostic)null);
+                        // Logger detection
+                        var loggerField = containingType.GetMembers()
+                            .OfType<IFieldSymbol>()
+                            .FirstOrDefault(f =>
+                                (f.Name == "_logger" || f.Name == "logger" || f.Name == "_log" || f.Name == "log") &&
+                                (f.Type.Name == "ILogger" || f.Type.ToDisplayString().StartsWith("Microsoft.Extensions.Logging.ILogger")));
+                        return (methodSymbol, methodDecl, loggerField, (Diagnostic)null);
                     })
                 .Where(x => x.Item1 != null)
                 .Select((x, _) => x);
@@ -78,13 +84,14 @@ namespace Observator.Generator
                 {
                     var methodSymbol = entry.Item1;
                     var methodDecl = entry.Item2;
-                    var diagnostic = entry.Item3;
+                    var loggerField = entry.Item3 as IFieldSymbol;
+                    var diagnostic = entry.Item4;
                     if (diagnostic != null)
                         spc.ReportDiagnostic(diagnostic);
                 }
-                var validMethods = attributedMethodsArr.Where(x => x.Item3 == null && x.Item1 != null && x.Item2 != null).ToList();
+                var validMethods = attributedMethodsArr.Where(x => x.Item4 == null && x.Item1 != null && x.Item2 != null).ToList();
                 // Update callSiteInfos to include InterceptableLocation
-                var callSiteInfos = new List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location)>();
+                var callSiteInfos = new List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location, IFieldSymbol loggerField)>();
                 foreach (var callEntry in callSitesArr)
                 {
                     var invocation = (InvocationExpressionSyntax)callEntry.Item1;
@@ -94,36 +101,44 @@ namespace Observator.Generator
                     {
                         var methodSymbol = validEntry.Item1;
                         var methodDecl = validEntry.Item2;
+                        var loggerField = validEntry.Item3 as IFieldSymbol;
                         if (SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition) &&
                             SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType))
                         {
-                            callSiteInfos.Add((methodSymbol, methodDecl, invocation, location));
+                            callSiteInfos.Add((methodSymbol, methodDecl, invocation, location, loggerField));
                             break;
                         }
                     }
                 }
                 // Group call sites by containing class and method signature (as strings)
-                var interceptorsByClassAndMethod = new Dictionary<(string className, string methodSig), List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location)>>();
+                var interceptorsByClassAndMethod = new Dictionary<(string className, string methodSig), List<(IMethodSymbol method, MethodDeclarationSyntax syntax, InvocationExpressionSyntax invocation, InterceptableLocation location, IFieldSymbol loggerField)>>();
                 foreach (var call in callSiteInfos)
                 {
                     var method = call.method;
                     var syntax = call.syntax;
                     var invocation = call.invocation;
                     var location = call.location;
+                    var loggerField = call.loggerField;
                     var containingType = method.ContainingType;
                     var className = containingType.ToDisplayString();
                     var methodSig = method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     var key = (className, methodSig);
                     if (!interceptorsByClassAndMethod.TryGetValue(key, out var list))
                     {
-                        list = new List<(IMethodSymbol, MethodDeclarationSyntax, InvocationExpressionSyntax, InterceptableLocation)>();
+                        list = new List<(IMethodSymbol, MethodDeclarationSyntax, InvocationExpressionSyntax, InterceptableLocation, IFieldSymbol)>();
                         interceptorsByClassAndMethod[key] = list;
                     }
-                    list.Add((method, syntax, invocation, location));
+                    list.Add((method, syntax, invocation, location, loggerField));
                 }
 
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("// <auto-generated />");
+                // Check if any logger is used in any class
+                bool anyLogger = interceptorsByClassAndMethod.Values.SelectMany(x => x).Any(x => x.loggerField != null);
+                if (anyLogger)
+                {
+                    sb.AppendLine("using Microsoft.Extensions.Logging;");
+                }
                 // Group by class for emission
                 var classGroups = interceptorsByClassAndMethod.GroupBy(kvp => kvp.Key.className);
                 foreach (var classGroup in classGroups)
@@ -169,13 +184,15 @@ namespace Observator.Generator
                             sb.AppendLine("    { throw new System.NotImplementedException(); }");
                         }
                         // Emit the interceptor method with InterceptsLocation attribute(s)
-                        foreach (var (_, _, _, location) in callList)
+                        foreach (var (_, _, _, location, _) in callList)
                         {
                             sb.AppendLine($"    [System.Runtime.CompilerServices.InterceptsLocation(1, \"{location.Data}\")]" );
                         }
                         var interceptorName = methodName + "_Interceptor";
+                        // Use loggerField from the first callList entry (all should be the same for a method)
+                        var loggerField = callList[0].loggerField;
                         sb.AppendLine($"    internal {asyncModifier}{returnType} {interceptorName}({parameters})");
-                        sb.AppendLine(GenerateInterceptorBody(methodName, cloneName, args, isAsync));
+                        sb.AppendLine(GenerateInterceptorBody(methodName, cloneName, args, isAsync, loggerField));
                     }
                     sb.AppendLine("}");
                     if (!string.IsNullOrEmpty(ns))
@@ -188,13 +205,17 @@ namespace Observator.Generator
         }
 
         // Helper for interceptor body
-        private static string GenerateInterceptorBody(string methodName, string cloneName, string args, bool isAsync)
+        private static string GenerateInterceptorBody(string methodName, string cloneName, string args, bool isAsync, IFieldSymbol loggerField)
         {
             var awaitPrefix = isAsync ? "await " : "";
             var returnPrefix = isAsync || !string.IsNullOrEmpty(args) ? "return " : "";
             var result = new System.Text.StringBuilder();
             result.AppendLine("    {");
             result.AppendLine($"        using var activity = Observator.Generated.ObservatorInfrastructure.ActivitySource.StartActivity(\"{methodName}\");");
+            if (loggerField != null)
+            {
+                result.AppendLine($"        _logger.LogDebug(\"Executing {{MethodName}}\", \"{methodName}\");");
+            }
             result.AppendLine("        try");
             result.AppendLine("        {");
             result.AppendLine($"            {returnPrefix}{awaitPrefix}this.{cloneName}({args});");
@@ -202,6 +223,10 @@ namespace Observator.Generator
             result.AppendLine("        catch (Exception ex)");
             result.AppendLine("        {");
             result.AppendLine("            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);");
+            if (loggerField != null)
+            {
+                result.AppendLine($"            _logger.LogError(ex, \"Exception in {{MethodName}}\", \"{methodName}\");");
+            }
             result.AppendLine("            throw;");
             result.AppendLine("        }");
             result.AppendLine("    }");

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Observator.Generated;
 using System;
 
@@ -5,6 +6,9 @@ namespace TestApp
 {
     public partial class SampleService
     {
+        private readonly ILogger<SampleService> _logger;
+        public SampleService(ILogger<SampleService> logger) => _logger = logger;
+
         [ObservatorTrace]
         public string Greet(string name)
         {

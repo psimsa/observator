@@ -2,6 +2,7 @@
 using Observator.Generated;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Microsoft.Extensions.Logging;
 
 var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(ObservatorInfrastructure.ActivitySourceName)
@@ -16,12 +17,18 @@ Console.WriteLine($"ActivitySource Version: {ObservatorInfrastructure.Version}")
 Console.WriteLine($"ActivitySource Instance: {ObservatorInfrastructure.ActivitySource}");
 Console.WriteLine($"Meter Instance: {ObservatorInfrastructure.Meter}");
 
-var sampleService = new TestApp.SampleService();
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var sampleLogger = loggerFactory.CreateLogger<TestApp.SampleService>();
+var edgeLogger = loggerFactory.CreateLogger<TestApp.EdgeCases>();
+
+var sampleService = new TestApp.SampleService(sampleLogger);
 var greetResult = sampleService.Greet("World");
 Console.WriteLine($"Greet result: {greetResult}");
 
-var sampleService2 = new TestApp.SampleService();
+var sampleService2 = new TestApp.SampleService(sampleLogger);
 var greetResult2 = sampleService2.Greet("Universe");
+
+var edgeCases = new TestApp.EdgeCases(edgeLogger);
 
 Console.WriteLine("Test completed successfully!");
 

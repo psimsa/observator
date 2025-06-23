@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Observator.Generated;
 using System;
 
