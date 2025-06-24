@@ -10,15 +10,13 @@ namespace Observator.Generator
         public MethodDeclarationSyntax MethodDeclaration { get; }
         public InvocationExpressionSyntax Invocation { get; }
         public InterceptableLocation Location { get; }
-        public IFieldSymbol? LoggerField { get; }
 
-        public InterceptorCandidateInfo(IMethodSymbol methodSymbol, MethodDeclarationSyntax methodDeclaration, InvocationExpressionSyntax invocation, InterceptableLocation location, IFieldSymbol? loggerField)
+        public InterceptorCandidateInfo(IMethodSymbol methodSymbol, MethodDeclarationSyntax methodDeclaration, InvocationExpressionSyntax invocation, InterceptableLocation location)
         {
             MethodSymbol = methodSymbol;
             MethodDeclaration = methodDeclaration;
             Invocation = invocation;
             Location = location;
-            LoggerField = loggerField;
         }
     }
 }

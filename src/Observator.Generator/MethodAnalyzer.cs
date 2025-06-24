@@ -22,15 +22,7 @@ namespace Observator.Generator
             if (traceAttr == null) return null;
             if (methodSymbol.IsAbstract) return null;
 
-            var containingType = methodSymbol.ContainingType;
-            var loggerField = containingType.GetMembers()
-                .OfType<IFieldSymbol>()
-                .FirstOrDefault(f =>
-                    (f.Name == ObservatorConstants.LoggerFieldName1 || f.Name == ObservatorConstants.LoggerFieldName2 ||
-                     f.Name == ObservatorConstants.LoggerFieldName3 || f.Name == ObservatorConstants.LoggerFieldName4) &&
-                    (f.Type.Name == ObservatorConstants.LoggerTypeName || f.Type.ToDisplayString().StartsWith(ObservatorConstants.LoggerTypePrefix)));
-
-            return new MethodToInterceptInfo(methodSymbol, methodDecl, loggerField, null);
+            return new MethodToInterceptInfo(methodSymbol, methodDecl, null);
         }
     }
 }
