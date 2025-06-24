@@ -46,21 +46,10 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System;
 
-namespace System.Runtime.CompilerServices
-{{
-    [System.AttributeUsage(System.AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class InterceptsLocationAttribute : Attribute
-    {{
-        public InterceptsLocationAttribute(int version, string data) {{ }}
-    }}
-}}
-
 namespace Observator.Generated.{assemblyName}
 {{
     internal static class ObservatorInfrastructure
     {{
-        public static readonly ActivitySource ActivitySource = new ActivitySource(""{assemblyName}"", ""{version}"");
-        public static readonly Meter Meter = new Meter(""{assemblyName}"", ""{version}"");
         public static string ActivitySourceName => ""{assemblyName}"";
         public static string Version => ""{version}"";
     }}
@@ -68,19 +57,8 @@ namespace Observator.Generated.{assemblyName}
     [System.AttributeUsage(System.AttributeTargets.Method)]
     internal sealed class ObservatorTraceAttribute : System.Attribute
     {{
-        public LogLevel LogLevel {{ get; set; }} = LogLevel.Debug;
         public bool IncludeParameters {{ get; set; }} = false;
         public bool IncludeReturnValue {{ get; set; }} = false;
-    }}
-
-    internal enum LogLevel
-    {{
-        Trace = 0,
-        Debug = 1,
-        Information = 2,
-        Warning = 3,
-        Error = 4,
-        Critical = 5
     }}
 }}
 ";

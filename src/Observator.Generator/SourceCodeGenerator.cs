@@ -68,7 +68,7 @@ namespace Observator.Generator
             var returnPrefix = isAsync || !string.IsNullOrEmpty(args) ? "return " : "";
             var result = new StringBuilder();
             result.AppendLine("    {");
-            result.AppendLine($"        using var activity = Observator.Generated.{assemblyName}.ObservatorInfrastructure.ActivitySource.StartActivity($\"{ObservatorConstants.ActivityNameFormat.Replace("{methodName}", methodName)}\");");
+            result.AppendLine($"        using var activity = System.Diagnostics.Activity.Current?.Source.StartActivity($\"{ObservatorConstants.ActivityNameFormat.Replace("{methodName}", methodName)}\");");
             result.AppendLine("        try");
             result.AppendLine("        {");
             result.AppendLine($"            {returnPrefix}{awaitPrefix}@source.{methodName}({args});");

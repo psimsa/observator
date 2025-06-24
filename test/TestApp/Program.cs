@@ -4,19 +4,20 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Microsoft.Extensions.Logging;
 using TestLib;
+using System.Diagnostics;
 
 var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(ObservatorInfrastructure.ActivitySourceName)
     // The rest of your setup code goes here
     .AddConsoleExporter()
     .Build();
+var acs = new ActivitySource(ObservatorInfrastructure.ActivitySourceName, ObservatorInfrastructure.Version);
+using var activity = acs.StartActivity("TestApp.Main", ActivityKind.Internal);
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("=== Observator Test App ===");
 Console.WriteLine($"ActivitySource Name: {ObservatorInfrastructure.ActivitySourceName}");
 Console.WriteLine($"ActivitySource Version: {ObservatorInfrastructure.Version}");
-Console.WriteLine($"ActivitySource Instance: {ObservatorInfrastructure.ActivitySource}");
-Console.WriteLine($"Meter Instance: {ObservatorInfrastructure.Meter}");
 
 var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 var sampleLogger = loggerFactory.CreateLogger<TestApp.SampleService>();
