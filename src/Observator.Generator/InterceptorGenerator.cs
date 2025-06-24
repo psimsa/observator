@@ -32,17 +32,17 @@ namespace Observator.Generator
                         (
                             ids.AttributeLists.SelectMany(al => al.Attributes)
                                 .Any(attr =>
-                                    attr.Name.ToString().Contains("ObservatorInterfaceTrace") // quick filter, refined in analyzer
+                                    attr.Name.ToString().Contains("ObservatorTrace") // quick filter, refined in analyzer
                                 )
                             ||
                             ids.Members.OfType<MethodDeclarationSyntax>()
                                 .SelectMany(m => m.AttributeLists.SelectMany(al => al.Attributes))
                                 .Any(attr =>
-                                    attr.Name.ToString().Contains("ObservatorInterfaceTrace")
+                                    attr.Name.ToString().Contains("ObservatorTrace")
                                 )
                         ),
                     transform: (ctx, ct) =>
-                        MethodAnalyzer.AnalyzeInterfaceDeclaration(
+                        MethodAnalyzer.AnalyzeTypeDeclaration(
                             ctx.SemanticModel.GetDeclaredSymbol((InterfaceDeclarationSyntax)ctx.Node, ct) as INamedTypeSymbol
                         )
                 )

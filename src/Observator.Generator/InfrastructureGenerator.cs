@@ -63,5 +63,6 @@ namespace Observator.Generated.{assemblyName}
 }}
 ";
         }
+        // Removed ObservatorTraceAttribute definition
     }
 }

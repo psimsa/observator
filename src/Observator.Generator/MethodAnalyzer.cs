@@ -21,20 +21,18 @@ namespace Observator.Generator
                 attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
                 attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
                 attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
+            // Removed interfaceTraceAttr check
 
-            var interfaceTraceAttr = attributes.FirstOrDefault(attr =>
-                attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorInterfaceTraceAttributeFullName ||
-                attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeName ||
-                attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeShortName);
+            // Removed interfaceTraceAttr check
 
-            // If neither attribute is present, skip
-            if (traceAttr == null && interfaceTraceAttr == null)
+            // If ObservatorTraceAttribute is not present, skip
+            if (traceAttr == null)
                 return null;
 
-            // If method is abstract or from interface, only allow if ObservatorInterfaceTraceAttribute is present
+            // If method is abstract or from interface, only allow if ObservatorTraceAttribute is present
             if (methodSymbol.IsAbstract || methodSymbol.ContainingType?.TypeKind == TypeKind.Interface)
             {
-                if (interfaceTraceAttr == null)
+                if (traceAttr == null)
                     return null;
                 return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: true);
             }
@@ -43,38 +41,36 @@ namespace Observator.Generator
             if (traceAttr != null)
                 return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: false);
 
-            // If only ObservatorInterfaceTraceAttribute is present on a non-abstract method
-            if (interfaceTraceAttr != null)
-                return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: true);
+            // Removed interfaceTraceAttr check
 
             return null;
         }
 
         /// <summary>
-        /// Analyze an interface symbol for ObservatorInterfaceTraceAttribute and return all public methods to intercept.
+        /// Analyze an interface symbol for ObservatorTraceAttribute and return all public methods to intercept.
         /// </summary>
-        public static IEnumerable<MethodToInterceptInfo> AnalyzeInterfaceDeclaration(INamedTypeSymbol interfaceSymbol)
+        public static IEnumerable<MethodToInterceptInfo> AnalyzeTypeDeclaration(INamedTypeSymbol typeSymbol)
         {
-            var interfaceAttr = interfaceSymbol.GetAttributes().FirstOrDefault(attr =>
-                attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorInterfaceTraceAttributeFullName ||
-                attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeName ||
-                attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeShortName);
+            var typeAttr = typeSymbol.GetAttributes().FirstOrDefault(attr =>
+                attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
+                attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
 
-            if (interfaceAttr == null)
+            if (typeAttr == null)
                 yield break;
 
-            foreach (var member in interfaceSymbol.GetMembers().OfType<IMethodSymbol>())
+            foreach (var member in typeSymbol.GetMembers().OfType<IMethodSymbol>())
             {
                 // Only public, non-static, non-constructor methods
                 if (member.DeclaredAccessibility == Accessibility.Public &&
                     !member.IsStatic &&
                     member.MethodKind == MethodKind.Ordinary)
                 {
-                    // If method itself has ObservatorInterfaceTraceAttribute, prefer method-level settings
+                    // If method itself has ObservatorTraceAttribute, prefer method-level settings
                     var methodAttr = member.GetAttributes().FirstOrDefault(attr =>
-                        attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorInterfaceTraceAttributeFullName ||
-                        attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeName ||
-                        attr.AttributeClass?.Name == ObservatorConstants.ObservatorInterfaceTraceAttributeShortName);
+                        attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                        attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
+                        attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
 
                     yield return new MethodToInterceptInfo(member, diagnostic: null, isInterfaceMethod: true);
                 }
