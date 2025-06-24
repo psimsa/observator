@@ -1,8 +1,9 @@
 ﻿using System;
-using Observator.Generated;
+using Observator.Generated.TestApp;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Microsoft.Extensions.Logging;
+using TestLib;
 
 var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(ObservatorInfrastructure.ActivitySourceName)
@@ -55,3 +56,6 @@ catch (NotImplementedException ex)
 {
     Console.WriteLine($"Caught expected exception: {ex.Message}");
 }
+
+var c = new Class1();
+c.Foo();

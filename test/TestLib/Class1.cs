@@ -1,10 +1,9 @@
-﻿using Observator.Generated;
-namespace TestLib;
+﻿namespace TestLib;
 
 public partial class Class1
 {
 
-    [ObservatorTrace]
+    [Observator.Generated.TestLib.ObservatorTraceAttribute]
     public void Foo()
     {
         Console.WriteLine("Hello from Class1.Foo()");

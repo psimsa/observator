@@ -55,9 +55,9 @@ namespace System.Runtime.CompilerServices
     }}
 }}
 
-namespace Observator.Generated
+namespace Observator.Generated.{assemblyName}
 {{
-    public static class ObservatorInfrastructure
+    internal static class ObservatorInfrastructure
     {{
         public static readonly ActivitySource ActivitySource = new ActivitySource(""{assemblyName}"", ""{version}"");
         public static readonly Meter Meter = new Meter(""{assemblyName}"", ""{version}"");
@@ -66,14 +66,14 @@ namespace Observator.Generated
     }}
 
     [System.AttributeUsage(System.AttributeTargets.Method)]
-    public sealed class ObservatorTraceAttribute : System.Attribute
+    internal sealed class ObservatorTraceAttribute : System.Attribute
     {{
         public LogLevel LogLevel {{ get; set; }} = LogLevel.Debug;
         public bool IncludeParameters {{ get; set; }} = false;
         public bool IncludeReturnValue {{ get; set; }} = false;
     }}
 
-    public enum LogLevel
+    internal enum LogLevel
     {{
         Trace = 0,
         Debug = 1,

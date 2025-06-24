@@ -1,4 +1,4 @@
-using Observator.Generated;
+using Observator.Generated.TestApp;
 
 namespace TestApp;
 

@@ -10,7 +10,8 @@ namespace Observator.Generator
     {
         public static Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>> Process(ImmutableArray<MethodToInterceptInfo> attributedMethods, ImmutableArray<InvocationCallSiteInfo> callSites)
         {
-            var validMethods = attributedMethods.Where(x => x.Diagnostic == null && x.MethodSymbol != null && x.MethodDeclaration != null).ToList();
+            // Accept methods from referenced assemblies (no MethodDeclaration)
+            var validMethods = attributedMethods.Where(x => x.Diagnostic == null && x.MethodSymbol != null).ToList();
 
             var callSiteInfos = new List<InterceptorCandidateInfo>();
             foreach (var callEntry in callSites)

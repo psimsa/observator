@@ -24,6 +24,46 @@ namespace Observator.Generator
                 .Where(x => x != null)
                 .Select((x, _) => x);
 
+            // Discover attributed methods in referenced assemblies
+            var externalAttributedMethods = context.CompilationProvider.Select((compilation, _) =>
+            {
+                var results = new List<MethodToInterceptInfo>();
+                foreach (var reference in compilation.References)
+                {
+                    var asmSymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+                    if (asmSymbol == null) continue;
+
+                    foreach (var type in GetAllTypes(asmSymbol.GlobalNamespace))
+                    {
+                        foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
+                        {
+                            foreach (var attr in method.GetAttributes())
+                            {
+                                var attrClass = attr.AttributeClass;
+                                if (attrClass == null) continue;
+                                var attrName = attrClass.ToDisplayString();
+                                if (attrName == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                                    attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
+                                    attrClass.Name == ObservatorConstants.ObservatorTraceShortName)
+                                {
+                                    results.Add(new MethodToInterceptInfo(method));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                return results;
+            });
+
+            var allAttributedMethods = attributedMethods.Collect().Combine(externalAttributedMethods)
+                .Select((tuple, _) =>
+                {
+                    var local = tuple.Left;
+                    var external = tuple.Right ?? new List<MethodToInterceptInfo>();
+                    return local.Concat(external).ToImmutableArray();
+                });
+
             var callSites = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: (node, _) => node is InvocationExpressionSyntax,
@@ -31,7 +71,7 @@ namespace Observator.Generator
                 .Where(x => x != null)
                 .Select((x, _) => x);
 
-            var combined = attributedMethods.Collect().Combine(callSites.Collect());
+            var combined = allAttributedMethods.Combine(callSites.Collect());
 
             context.RegisterSourceOutput(combined, (spc, tuple) =>
             {
@@ -49,6 +89,16 @@ namespace Observator.Generator
 
                 spc.AddSource("ObservatorInterceptors.g.cs", SourceText.From(generatedCode, System.Text.Encoding.UTF8));
             });
+
+            // Helper: recursively get all types in a namespace
+            static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceSymbol ns)
+            {
+                foreach (var member in ns.GetTypeMembers())
+                    yield return member;
+                foreach (var nested in ns.GetNamespaceMembers())
+                foreach (var t in GetAllTypes(nested))
+                    yield return t;
+            }
         }
     }
 }

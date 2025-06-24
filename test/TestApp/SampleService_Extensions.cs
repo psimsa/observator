@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Observator.Generated;
+using Observator.Generated.TestApp;
 using System;
 
 namespace TestApp
