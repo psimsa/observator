@@ -71,12 +71,19 @@ namespace Observator.Generator
                 .Where(x => x != null)
                 .Select((x, _) => x);
 
-            var combined = allAttributedMethods.Combine(callSites.Collect());
-
-            context.RegisterSourceOutput(combined, (spc, tuple) =>
+            var assemblyInfo = context.CompilationProvider.Select((compilation, _) =>
             {
-                var attributedMethodsArr = tuple.Left;
-                var callSitesArr = tuple.Right;
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
+                return assemblyName;
+            });
+
+            var combined = allAttributedMethods.Combine(callSites.Collect()).Combine(assemblyInfo);
+
+            context.RegisterSourceOutput(combined, (spc, triple) =>
+            {
+                var attributedMethodsArr = triple.Left.Left;
+                var callSitesArr = triple.Left.Right;
+                var assemblyName = triple.Right;
 
                 foreach (var entry in attributedMethodsArr)
                 {
@@ -85,7 +92,7 @@ namespace Observator.Generator
                 }
 
                 var interceptorsByNamespace = InterceptorDataProcessor.Process(attributedMethodsArr, callSitesArr);
-                var generatedCode = SourceCodeGenerator.Generate(interceptorsByNamespace);
+                var generatedCode = SourceCodeGenerator.Generate(interceptorsByNamespace, assemblyName);
 
                 spc.AddSource("ObservatorInterceptors.g.cs", SourceText.From(generatedCode, System.Text.Encoding.UTF8));
             });
