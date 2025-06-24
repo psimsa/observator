@@ -8,11 +8,13 @@ namespace Observator.Generator
     {
         public IMethodSymbol MethodSymbol { get; }
         public InterceptableLocation Location { get; }
+        public bool IsInterfaceMethod { get; }
 
-        public MethodInterceptorInfo(IMethodSymbol methodSymbol, InterceptableLocation location)
+        public MethodInterceptorInfo(IMethodSymbol methodSymbol, InterceptableLocation location, bool isInterfaceMethod)
         {
             MethodSymbol = methodSymbol;
             Location = location;
+            IsInterfaceMethod = isInterfaceMethod;
         }
     }
 }

@@ -60,3 +60,13 @@ catch (NotImplementedException ex)
 
 var c = new Class1();
 c.Foo();
+// --- Interface Tracing Test Cases ---
+Console.WriteLine("\n--- Testing Interface Tracing ---");
+TestApp.IMyService myService = new TestApp.MyService();
+string result1 = myService.DoSomething("hello interface");
+Console.WriteLine($"DoSomething result: {result1}");
+
+int result2 = myService.Calculate(10, 20);
+Console.WriteLine($"Calculate result: {result2}");
+
+// To verify tracing, check for activity/log output or inspect Activity.Current if available.

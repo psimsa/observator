@@ -42,7 +42,10 @@ namespace Observator.Generator
                         sb.AppendLine($"    [System.Runtime.CompilerServices.InterceptsLocationAttribute({call.Location.Version}, \"{call.Location.Data}\")]");
                     }
 
-                    sb.AppendLine($"    public static {asyncModifier}{returnType} Intercepts{methodName}(this {method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)} @source{(parameters.Length > 0 ? ", " + parameters : "")})");
+                    string thisType = callList[0].IsInterfaceMethod
+                        ? callList[0].MethodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                        : method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    sb.AppendLine($"    public static {asyncModifier}{returnType} Intercepts{methodName}(this {thisType} @source{(parameters.Length > 0 ? ", " + parameters : "")})");
                     sb.AppendLine(GenerateInterceptorBody_Extension(methodName, args, isAsync, assemblyName));
                 }
 

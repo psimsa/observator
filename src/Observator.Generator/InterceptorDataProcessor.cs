@@ -57,7 +57,10 @@ namespace Observator.Generator
                     methodDict[methodSig] = callList;
                 }
 
-                callList.Add(new MethodInterceptorInfo(method, location));
+                // Find the original MethodToInterceptInfo to get IsInterfaceMethod
+                var methodInfo = validMethods.FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.MethodSymbol, method));
+                bool isInterfaceMethod = methodInfo?.IsInterfaceMethod ?? false;
+                callList.Add(new MethodInterceptorInfo(method, location, isInterfaceMethod));
             }
 
             return interceptorsByNamespace;

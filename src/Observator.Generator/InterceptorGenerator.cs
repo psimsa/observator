@@ -24,6 +24,31 @@ namespace Observator.Generator
                 .Where(x => x != null)
                 .Select((x, _) => x);
 
+            // Interface method analysis
+            var interfaceMethods = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: (node, _) =>
+                        node is InterfaceDeclarationSyntax ids &&
+                        (
+                            ids.AttributeLists.SelectMany(al => al.Attributes)
+                                .Any(attr =>
+                                    attr.Name.ToString().Contains("ObservatorInterfaceTrace") // quick filter, refined in analyzer
+                                )
+                            ||
+                            ids.Members.OfType<MethodDeclarationSyntax>()
+                                .SelectMany(m => m.AttributeLists.SelectMany(al => al.Attributes))
+                                .Any(attr =>
+                                    attr.Name.ToString().Contains("ObservatorInterfaceTrace")
+                                )
+                        ),
+                    transform: (ctx, ct) =>
+                        MethodAnalyzer.AnalyzeInterfaceDeclaration(
+                            ctx.SemanticModel.GetDeclaredSymbol((InterfaceDeclarationSyntax)ctx.Node, ct) as INamedTypeSymbol
+                        )
+                )
+                .Where(x => x != null)
+                .SelectMany((x, _) => x);
+
             // Discover attributed methods in referenced assemblies
             var externalAttributedMethods = context.CompilationProvider.Select((compilation, _) =>
             {
@@ -56,12 +81,15 @@ namespace Observator.Generator
                 return results;
             });
 
-            var allAttributedMethods = attributedMethods.Collect().Combine(externalAttributedMethods)
+            var allAttributedMethods = attributedMethods.Collect()
+                .Combine(interfaceMethods.Collect())
+                .Select((tuple, _) => tuple.Left.Concat(tuple.Right).ToImmutableArray())
+                .Combine(externalAttributedMethods)
                 .Select((tuple, _) =>
                 {
-                    var local = tuple.Left;
+                    var localAndInterface = tuple.Left;
                     var external = tuple.Right ?? new List<MethodToInterceptInfo>();
-                    return local.Concat(external).ToImmutableArray();
+                    return localAndInterface.AddRange(external);
                 });
 
             var callSites = context.SyntaxProvider
