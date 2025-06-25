@@ -30,7 +30,7 @@ namespace TestApp
         public override string GreetAbstract(string name)
         {
             Console.WriteLine($"GreetAbstract OVERRIDE called with: {name}");
-            return $"Hello from abstract override, {name}!";
+            return $"Hello, {(name == null ? "null" : name)}!";
         }
     }
 }

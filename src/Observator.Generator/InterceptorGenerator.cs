@@ -52,6 +52,13 @@ namespace Observator.Generator
             // Discover attributed methods in referenced assemblies
             var externalAttributedMethods = context.CompilationProvider.Select((compilation, _) =>
             {
+                // Extracted logic for clarity and maintainability
+                return GetAttributedMethodsFromReferences(compilation);
+            });
+
+            // Helper method to extract attributed methods from referenced assemblies
+            static List<MethodToInterceptInfo> GetAttributedMethodsFromReferences(Compilation compilation)
+            {
                 var results = new List<MethodToInterceptInfo>();
                 foreach (var reference in compilation.References)
                 {
@@ -62,24 +69,22 @@ namespace Observator.Generator
                     {
                         foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
                         {
-                            foreach (var attr in method.GetAttributes())
+                            var hasTraceAttr = method.GetAttributes().Any(attr =>
                             {
                                 var attrClass = attr.AttributeClass;
-                                if (attrClass == null) continue;
+                                if (attrClass == null) return false;
                                 var attrName = attrClass.ToDisplayString();
-                                if (attrName == ObservatorConstants.ObservatorTraceAttributeFullName ||
-                                    attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-                                    attrClass.Name == ObservatorConstants.ObservatorTraceShortName)
-                                {
-                                    results.Add(new MethodToInterceptInfo(method));
-                                    break;
-                                }
-                            }
+                                return attrName == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                                       attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
+                                       attrClass.Name == ObservatorConstants.ObservatorTraceShortName;
+                            });
+                            if (hasTraceAttr)
+                                results.Add(new MethodToInterceptInfo(method));
                         }
                     }
                 }
                 return results;
-            });
+            }
 
             var allAttributedMethods = attributedMethods.Collect()
                 .Combine(interfaceMethods.Collect())

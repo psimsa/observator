@@ -8,54 +8,45 @@ namespace Observator.Generator
 {
     public static class InterceptorDataProcessor
     {
-        public static Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>> Process(ImmutableArray<MethodToInterceptInfo> attributedMethods, ImmutableArray<InvocationCallSiteInfo> callSites)
+        public static Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>> Process(
+            ImmutableArray<MethodToInterceptInfo> attributedMethods,
+            ImmutableArray<InvocationCallSiteInfo> callSites)
         {
-            // Accept methods from referenced assemblies (no MethodDeclaration)
-            var validMethods = attributedMethods.Where(x => x.Diagnostic == null && x.MethodSymbol != null).ToList();
+            // Filter valid methods
+            var validMethods = attributedMethods
+                .Where(x => x.Diagnostic == null && x.MethodSymbol != null)
+                .ToList();
 
-            var callSiteInfos = new List<InterceptorCandidateInfo>();
-            foreach (var callEntry in callSites)
-            {
-                var invocation = callEntry.Invocation;
-                var targetMethod = callEntry.TargetMethod;
-                var location = callEntry.Location;
+            // Match call sites to valid methods using LINQ for clarity
+            var callSiteInfos = (
+                from callEntry in callSites
+                let invocation = callEntry.Invocation
+                let targetMethod = callEntry.TargetMethod
+                let location = callEntry.Location
+                from validEntry in validMethods
+                let methodSymbol = validEntry.MethodSymbol
+                let methodDecl = validEntry.MethodDeclaration
+                where SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition)
+                   && SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType)
+                select new InterceptorCandidateInfo(methodSymbol, methodDecl, invocation, location)
+            ).ToList();
 
-                foreach (var validEntry in validMethods)
-                {
-                    var methodSymbol = validEntry.MethodSymbol;
-                    var methodDecl = validEntry.MethodDeclaration;
-
-                    if (SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition) &&
-                        SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType))
-                    {
-                        callSiteInfos.Add(new InterceptorCandidateInfo(methodSymbol, methodDecl, invocation, location));
-                        break;
-                    }
-                }
-            }
-
+            // Group by namespace and method signature
             var interceptorsByNamespace = new Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>>();
+
             foreach (var call in callSiteInfos)
             {
                 var method = call.MethodSymbol;
                 var location = call.Location;
-
                 var ns = (call.Invocation.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString())
                           ?? method.ContainingType.ContainingNamespace?.ToDisplayString() ?? "";
-
                 var methodSig = method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
+                // Helper to get or add dictionary entry
                 if (!interceptorsByNamespace.TryGetValue(ns, out var methodDict))
-                {
-                    methodDict = new Dictionary<string, List<MethodInterceptorInfo>>();
-                    interceptorsByNamespace[ns] = methodDict;
-                }
-
+                    interceptorsByNamespace[ns] = methodDict = new Dictionary<string, List<MethodInterceptorInfo>>();
                 if (!methodDict.TryGetValue(methodSig, out var callList))
-                {
-                    callList = new List<MethodInterceptorInfo>();
-                    methodDict[methodSig] = callList;
-                }
+                    methodDict[methodSig] = callList = new List<MethodInterceptorInfo>();
 
                 // Find the original MethodToInterceptInfo to get IsInterfaceMethod
                 var methodInfo = validMethods.FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.MethodSymbol, method));

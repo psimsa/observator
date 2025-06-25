@@ -4,7 +4,7 @@ namespace TestApp
     {
         public string DoSomething(string input)
         {
-            return $"Processed: {input}";
+            return input;
         }
 
         public int Calculate(int a, int b)
