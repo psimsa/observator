@@ -2,6 +2,8 @@
 
 This document outlines areas for improvement in the Observator Roslyn code generator to meet enterprise-level standards. The suggestions cover code quality, performance, robustness, testability, and adherence to best practices.
 
+### Important: Ensure to follow instructions outlined in `ai guidelines.md`
+
 ## Analysis and Individual Steps
 
 ### 1. Code Quality & Maintainability

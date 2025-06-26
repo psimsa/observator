@@ -5,3 +5,4 @@
 - For code generation tasks, always use `Microsoft.CodeAnalysis.CSharp.SyntaxFactory` to construct syntax trees instead of string interpolation.
 - When refactoring code, adhere to the Single Responsibility Principle (SRP) and aim to reduce method complexity.
 - New code should be tested with unit tests. Run `dotnet test` to ensure all tests pass after modifications. 
+- All code needs to be reviewed by a dedicated code review agent. Code reviewing agent will provide feedback on the code quality, maintainability, and adherence to best practices. Code must receive `Pass` or `Pass with notes` mark to be considered complete.
