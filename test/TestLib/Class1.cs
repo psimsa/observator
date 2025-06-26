@@ -8,4 +8,11 @@ public partial class Class1
     {
         Console.WriteLine("Hello from Class1.Foo()");
     }
+
+    [Observator.Generated.TestLib.ObservatorTraceAttribute]
+    public void Bar()
+    {
+        Foo();
+        Console.WriteLine("Hello from Class1.Bar()");
+    }
 }

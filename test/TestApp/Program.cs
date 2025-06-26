@@ -5,11 +5,18 @@ using OpenTelemetry.Trace;
 using Microsoft.Extensions.Logging;
 using TestLib;
 using System.Diagnostics;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 
-var tracerProvider = Sdk.CreateTracerProviderBuilder()
+using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(ObservatorInfrastructure.ActivitySourceName)
     // The rest of your setup code goes here
     .AddConsoleExporter()
+    .AddOtlpExporter(options =>
+    {
+        options.Endpoint = new Uri("http://localhost:4317");
+        options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+    })
     .Build();
 var acs = new ActivitySource(ObservatorInfrastructure.ActivitySourceName, ObservatorInfrastructure.Version);
 using var activity = acs.StartActivity("TestApp.Main", ActivityKind.Internal);
@@ -19,7 +26,14 @@ Console.WriteLine("=== Observator Test App ===");
 Console.WriteLine($"ActivitySource Name: {ObservatorInfrastructure.ActivitySourceName}");
 Console.WriteLine($"ActivitySource Version: {ObservatorInfrastructure.Version}");
 
-var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().AddOpenTelemetry(logging =>
+{
+    logging.AddOtlpExporter(options =>
+    {
+        options.Endpoint = new Uri("http://localhost:4317");
+        options.Protocol = OtlpExportProtocol.HttpProtobuf;
+    });
+}));
 var sampleLogger = loggerFactory.CreateLogger<TestApp.SampleService>();
 var edgeLogger = loggerFactory.CreateLogger<TestApp.EdgeCases>();
 
@@ -60,6 +74,7 @@ catch (NotImplementedException ex)
 
 var c = new Class1();
 c.Foo();
+c.Bar();
 // --- Interface Tracing Test Cases ---
 Console.WriteLine("\n--- Testing Interface Tracing ---");
 TestApp.IMyService myService = new TestApp.MyService();
