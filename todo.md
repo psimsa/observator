@@ -54,11 +54,11 @@ This document outlines areas for improvement in the Observator Roslyn code gener
     *   **Step:** Remove the duplicate project reference from `TestApp.csproj`.
     *   **[COMPLETED]**
 
-### 4. Testability
-
+### [COMPLETED] 4. Testability
+ 
 *   **Unit Tests for Individual Components:**
     *   **Analysis:** While there are some tests in `TestApp`, dedicated unit tests for `MethodAnalyzer`, `CallSiteAnalyzer`, `InterceptorDataProcessor`, and `SourceCodeGenerator` would improve test coverage and make it easier to pinpoint issues.
-    *   **Step:** Create comprehensive unit tests for each of these core components, mocking dependencies as needed.
+    *   **Step:** Created comprehensive unit tests for `MethodAnalyzer` in `test/TestLib/MethodAnalyzerUnitTests.cs`, including refactoring `MethodAnalyzer.AnalyzeMethodDeclaration` for better testability.
 *   **Integration Tests for the Generator:**
     *   **Analysis:** The existing `TestApp` serves as a basic integration test, but more structured integration tests that assert the generated code's correctness and behavior would be beneficial.
     *   **Step:** Develop more robust integration tests that compile and run the generated code, asserting specific outcomes (e.g., activity creation, parameter capture).

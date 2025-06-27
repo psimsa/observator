@@ -26,11 +26,6 @@ public class MethodAnalyzerUnitTests
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
-    private static GeneratorSyntaxContext GetGeneratorSyntaxContext(Compilation compilation, SyntaxNode node)
-    {
-        var semanticModel = compilation.GetSemanticModel(node.SyntaxTree);
-        return new GeneratorSyntaxContext(compilation, semanticModel, node, CancellationToken.None);
-    }
 
     [Fact]
     public void AnalyzeMethodDeclaration_ReturnsNull_WhenNoObservatorTraceAttribute()
@@ -47,9 +42,9 @@ public class MethodAnalyzerUnitTests
 
         var compilation = CreateCompilation(source);
         var methodDeclaration = compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var context = GetGeneratorSyntaxContext(compilation, methodDeclaration);
+        var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
 
-        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, context, CancellationToken.None);
+        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, semanticModel, CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -70,9 +65,9 @@ public class MethodAnalyzerUnitTests
 
         var compilation = CreateCompilation(source);
         var methodDeclaration = compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var context = GetGeneratorSyntaxContext(compilation, methodDeclaration);
+        var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
 
-        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, context, CancellationToken.None);
+        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, semanticModel, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal("MyTracedMethod", result.MethodSymbol.Name);
@@ -95,9 +90,9 @@ public class MethodAnalyzerUnitTests
 
         var compilation = CreateCompilation(source);
         var methodDeclaration = compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var context = GetGeneratorSyntaxContext(compilation, methodDeclaration);
+        var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
 
-        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, context, CancellationToken.None);
+        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, semanticModel, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal("InterfaceMethod", result.MethodSymbol.Name);
@@ -120,9 +115,9 @@ public class MethodAnalyzerUnitTests
 
         var compilation = CreateCompilation(source);
         var methodDeclaration = compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var context = GetGeneratorSyntaxContext(compilation, methodDeclaration);
+        var semanticModel = compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
 
-        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, context, CancellationToken.None);
+        var result = MethodAnalyzer.AnalyzeMethodDeclaration(methodDeclaration, semanticModel, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal("AbstractMethod", result.MethodSymbol.Name);
@@ -145,8 +140,9 @@ public class MethodAnalyzerUnitTests
         var compilation = CreateCompilation(source);
         var typeSymbol = compilation.GetSemanticModel(compilation.SyntaxTrees.First())
                                     .GetDeclaredSymbol(compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<InterfaceDeclarationSyntax>().First()) as INamedTypeSymbol;
+        Assert.NotNull(typeSymbol); // Ensure typeSymbol is not null for the test
 
-        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol).ToList();
+        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol!).ToList(); // Use null-forgiving operator after Assert.NotNull
 
         Assert.Empty(result);
     }
@@ -171,8 +167,9 @@ public class MethodAnalyzerUnitTests
         var compilation = CreateCompilation(source);
         var typeSymbol = compilation.GetSemanticModel(compilation.SyntaxTrees.First())
                                     .GetDeclaredSymbol(compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<InterfaceDeclarationSyntax>().First()) as INamedTypeSymbol;
+        Assert.NotNull(typeSymbol); // Ensure typeSymbol is not null for the test
 
-        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol).ToList();
+        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol!).ToList(); // Use null-forgiving operator after Assert.NotNull
 
         Assert.Single(result);
         Assert.Equal("PublicMethod", result.First().MethodSymbol.Name);
@@ -198,8 +195,9 @@ public class MethodAnalyzerUnitTests
         var compilation = CreateCompilation(source);
         var typeSymbol = compilation.GetSemanticModel(compilation.SyntaxTrees.First())
                                     .GetDeclaredSymbol(compilation.SyntaxTrees.First().GetRoot().DescendantNodes().OfType<InterfaceDeclarationSyntax>().First()) as INamedTypeSymbol;
+        Assert.NotNull(typeSymbol); // Ensure typeSymbol is not null for the test
 
-        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol).ToList();
+        var result = MethodAnalyzer.AnalyzeTypeDeclaration(typeSymbol!).ToList(); // Use null-forgiving operator after Assert.NotNull
 
         Assert.Equal(2, result.Count); // Both methods should be returned by AnalyzeTypeDeclaration
         Assert.Contains(result, m => m.MethodSymbol.Name == "MethodFromTypeAttribute");

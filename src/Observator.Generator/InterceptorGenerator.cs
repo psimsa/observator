@@ -68,7 +68,7 @@ public class InterceptorGenerator : IIncrementalGenerator
         return context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: (node, _) => node is MethodDeclarationSyntax,
-                transform: (ctx, ct) => MethodAnalyzer.AnalyzeMethodDeclaration(ctx.Node, ctx, ct))
+                transform: (ctx, ct) => ctx.AnalyzeMethodDeclaration(ct))
             .Where(x => x != null)
             .Select((x, _) => x!); // Add null-forgiving operator as we've filtered out nulls
     }

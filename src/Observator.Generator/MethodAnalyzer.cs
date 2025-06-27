@@ -9,11 +9,10 @@ namespace Observator.Generator;
 
 public static class MethodAnalyzer
 {
-    public static MethodToInterceptInfo? AnalyzeMethodDeclaration(SyntaxNode node, GeneratorSyntaxContext ctx, CancellationToken ct)
+    public static MethodToInterceptInfo? AnalyzeMethodDeclaration(SyntaxNode node, SemanticModel semanticModel, CancellationToken ct)
     {
         var methodDecl = (MethodDeclarationSyntax)node;
-        var model = ctx.SemanticModel;
-        var methodSymbol = model.GetDeclaredSymbol(methodDecl, ct) as IMethodSymbol;
+        var methodSymbol = semanticModel.GetDeclaredSymbol(methodDecl, ct) as IMethodSymbol;
         if (methodSymbol == null) return null;
 
         var attributes = methodSymbol.GetAttributes();
@@ -55,7 +54,8 @@ public static class MethodAnalyzer
         {
             // Only public, non-static, non-constructor methods
             if (member.DeclaredAccessibility == Accessibility.Public &&
-                member.MethodKind == MethodKind.Ordinary)
+                member.MethodKind == MethodKind.Ordinary &&
+                !member.IsStatic) // Exclude static methods
             {
                 // If method itself has ObservatorTraceAttribute, prefer method-level settings
                 var methodAttr = member.GetAttributes().FirstOrDefault(attr =>
@@ -66,5 +66,14 @@ public static class MethodAnalyzer
                 yield return new MethodToInterceptInfo(member, null, isInterfaceMethod: true);
             }
         }
+    }
+    
+}
+
+public static class GeneratorSyntaxContextExtensions
+{
+    public static MethodToInterceptInfo? AnalyzeMethodDeclaration(this GeneratorSyntaxContext ctx, CancellationToken ct)
+    {
+        return MethodAnalyzer.AnalyzeMethodDeclaration(ctx.Node, ctx.SemanticModel, ct);
     }
 }
