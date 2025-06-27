@@ -23,10 +23,6 @@ public static class MethodAnalyzer
             attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
-        // Removed interfaceTraceAttr check
-
-        // Removed interfaceTraceAttr check
-
         // If ObservatorTraceAttribute is not present, skip
         if (traceAttr == null)
             return null;
@@ -59,7 +55,6 @@ public static class MethodAnalyzer
         {
             // Only public, non-static, non-constructor methods
             if (member.DeclaredAccessibility == Accessibility.Public &&
-                !member.IsStatic &&
                 member.MethodKind == MethodKind.Ordinary)
             {
                 // If method itself has ObservatorTraceAttribute, prefer method-level settings
@@ -68,7 +63,7 @@ public static class MethodAnalyzer
                     attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
                     attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
 
-                yield return new MethodToInterceptInfo(member, DiagnosticReporter.CreateStaticMethodDiagnostic(member.Name, member.Locations[0]), isInterfaceMethod: true);
+                yield return new MethodToInterceptInfo(member, null, isInterfaceMethod: true);
             }
         }
     }
