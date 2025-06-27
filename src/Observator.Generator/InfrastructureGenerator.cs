@@ -5,6 +5,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 
+using sf = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+
+
 namespace Observator.Generator;
 
 [Generator]
@@ -43,70 +46,70 @@ public class InfrastructureGenerator : IIncrementalGenerator
         var traceAttrName = "ObservatorTraceAttribute";
 
         // Attribute class
-        var traceAttribute = SyntaxFactory.ClassDeclaration(traceAttrName)
-            .AddModifiers(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.SealedKeyword))
+        var traceAttribute = sf.ClassDeclaration(traceAttrName)
+            .AddModifiers(sf.Token(SyntaxKind.InternalKeyword), sf.Token(SyntaxKind.SealedKeyword))
             .AddBaseListTypes(
-                SyntaxFactory.SimpleBaseType(
-                    SyntaxFactory.ParseTypeName("System.Attribute")))
+                sf.SimpleBaseType(
+                    sf.ParseTypeName("System.Attribute")))
             .AddAttributeLists(
-                SyntaxFactory.AttributeList(
-                    SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.Attribute(
-                            SyntaxFactory.ParseName("System.AttributeUsage"))
+                sf.AttributeList(
+                    sf.SingletonSeparatedList(
+                        sf.Attribute(
+                            sf.ParseName("System.AttributeUsage"))
                         .AddArgumentListArguments(
-                            SyntaxFactory.AttributeArgument(
-                                SyntaxFactory.MemberAccessExpression(
+                            sf.AttributeArgument(
+                                sf.MemberAccessExpression(
                                     SyntaxKind.SimpleMemberAccessExpression,
-                                    SyntaxFactory.ParseName("System.AttributeTargets"),
-                                    SyntaxFactory.IdentifierName("Method")))))))
+                                    sf.ParseName("System.AttributeTargets"),
+                                    sf.IdentifierName("Method")))))))
             .AddMembers(
-                SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.BoolKeyword)), "IncludeParameters")
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+                sf.PropertyDeclaration(sf.PredefinedType(sf.Token(SyntaxKind.BoolKeyword)), "IncludeParameters")
+                    .AddModifiers(sf.Token(SyntaxKind.PublicKeyword))
                     .AddAccessorListAccessors(
-                        SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
-                        SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)))
+                        sf.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)),
+                        sf.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)))
                     .WithInitializer(
-                        SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression)))
-                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
-                SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.BoolKeyword)), "IncludeReturnValue")
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+                        sf.EqualsValueClause(sf.LiteralExpression(SyntaxKind.FalseLiteralExpression)))
+                    .WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)),
+                sf.PropertyDeclaration(sf.PredefinedType(sf.Token(SyntaxKind.BoolKeyword)), "IncludeReturnValue")
+                    .AddModifiers(sf.Token(SyntaxKind.PublicKeyword))
                     .AddAccessorListAccessors(
-                        SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
-                        SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)))
+                        sf.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)),
+                        sf.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)))
                     .WithInitializer(
-                        SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression)))
-                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
+                        sf.EqualsValueClause(sf.LiteralExpression(SyntaxKind.FalseLiteralExpression)))
+                    .WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken))
             );
 
         // Infrastructure class
-        var infraClass = SyntaxFactory.ClassDeclaration(className)
-            .AddModifiers(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
+        var infraClass = sf.ClassDeclaration(className)
+            .AddModifiers(sf.Token(SyntaxKind.InternalKeyword), sf.Token(SyntaxKind.StaticKeyword))
             .AddMembers(
-                SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)), "ActivitySourceName")
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
+                sf.PropertyDeclaration(sf.PredefinedType(sf.Token(SyntaxKind.StringKeyword)), "ActivitySourceName")
+                    .AddModifiers(sf.Token(SyntaxKind.PublicKeyword), sf.Token(SyntaxKind.StaticKeyword))
                     .WithExpressionBody(
-                        SyntaxFactory.ArrowExpressionClause(
-                            SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(assemblyName))))
-                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
-                SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)), "Version")
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
+                        sf.ArrowExpressionClause(
+                            sf.LiteralExpression(SyntaxKind.StringLiteralExpression, sf.Literal(assemblyName))))
+                    .WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken)),
+                sf.PropertyDeclaration(sf.PredefinedType(sf.Token(SyntaxKind.StringKeyword)), "Version")
+                    .AddModifiers(sf.Token(SyntaxKind.PublicKeyword), sf.Token(SyntaxKind.StaticKeyword))
                     .WithExpressionBody(
-                        SyntaxFactory.ArrowExpressionClause(
-                            SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(version))))
-                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
+                        sf.ArrowExpressionClause(
+                            sf.LiteralExpression(SyntaxKind.StringLiteralExpression, sf.Literal(version))))
+                    .WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken))
             );
 
         // Namespace
-        var ns = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.ParseName(nsName))
+        var ns = sf.NamespaceDeclaration(sf.ParseName(nsName))
             .AddUsings(
-                SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Diagnostics")),
-                SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Diagnostics.Metrics")),
-                SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System")))
+                sf.UsingDirective(sf.ParseName("System.Diagnostics")),
+                sf.UsingDirective(sf.ParseName("System.Diagnostics.Metrics")),
+                sf.UsingDirective(sf.ParseName("System")))
             .AddMembers(infraClass, traceAttribute);
 
         // Compilation unit
-        var cu = SyntaxFactory.CompilationUnit()
-            .WithLeadingTrivia(SyntaxFactory.Comment("// <auto-generated />"))
+        var cu = sf.CompilationUnit()
+            .WithLeadingTrivia(sf.Comment("// <auto-generated />"))
             .AddMembers(ns)
             .NormalizeWhitespace();
 
