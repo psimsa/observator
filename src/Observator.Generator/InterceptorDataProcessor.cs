@@ -50,6 +50,7 @@ public static class InterceptorDataProcessor
             var method = call.MethodSymbol;
             var location = call.Location;
             var ns = (call.Invocation.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString())
+                     ?? (call.Invocation.Ancestors().OfType<FileScopedNamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString())
                      ?? method.ContainingType.ContainingNamespace?.ToDisplayString() ?? "";
 
             if (!interceptorsByNamespace.TryGetValue(ns, out var callList))
