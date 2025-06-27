@@ -8,7 +8,7 @@ namespace Observator.Generator;
 
 public static class InterceptorDataProcessor
 {
-    public static Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>> Process(
+    public static Dictionary<string, List<MethodInterceptorInfo>> Process(
         ImmutableArray<MethodToInterceptInfo> attributedMethods,
         ImmutableArray<InvocationCallSiteInfo> callSites)
     {
@@ -31,8 +31,8 @@ public static class InterceptorDataProcessor
             select new InterceptorCandidateInfo(methodSymbol, methodDecl, invocation, location)
         ).ToList();
 
-        // Group by namespace and method signature
-        var interceptorsByNamespace = new Dictionary<string, Dictionary<string, List<MethodInterceptorInfo>>>();
+        // Group by namespace
+        var interceptorsByNamespace = new Dictionary<string, List<MethodInterceptorInfo>>();
 
         foreach (var call in callSiteInfos)
         {
@@ -40,13 +40,9 @@ public static class InterceptorDataProcessor
             var location = call.Location;
             var ns = (call.Invocation.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString())
                      ?? method.ContainingType.ContainingNamespace?.ToDisplayString() ?? "";
-            var methodSig = method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-            // Helper to get or add dictionary entry
-            if (!interceptorsByNamespace.TryGetValue(ns, out var methodDict))
-                interceptorsByNamespace[ns] = methodDict = new Dictionary<string, List<MethodInterceptorInfo>>();
-            if (!methodDict.TryGetValue(methodSig, out var callList))
-                methodDict[methodSig] = callList = new List<MethodInterceptorInfo>();
+            if (!interceptorsByNamespace.TryGetValue(ns, out var callList))
+                interceptorsByNamespace[ns] = callList = new List<MethodInterceptorInfo>();
 
             // Find the original MethodToInterceptInfo to get IsInterfaceMethod
             var methodInfo = validMethods.FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.MethodSymbol, method));

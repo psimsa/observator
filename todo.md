@@ -8,10 +8,10 @@ This document outlines areas for improvement in the Observator Roslyn code gener
 
 ### 1. Code Quality & Maintainability
 
-*   **Use `SyntaxFactory` for Code Generation:**
+*   **[COMPLETED] Use `SyntaxFactory` for Code Generation:**
     *   **Analysis:** The `SourceCodeGenerator.cs` currently relies heavily on string interpolation to construct the generated C# code. This approach is error-prone, lacks type safety, and can be difficult to maintain for complex code structures.
     *   **Step:** Refactor `SourceCodeGenerator.cs` to use `Microsoft.CodeAnalysis.CSharp.SyntaxFactory` methods to programmatically construct the syntax tree for the generated interceptors. This will improve correctness, readability, and maintainability.
-*   **Single Responsibility Principle (SRP) & Method Length:**
+*   **[COMPLETED] Single Responsibility Principle (SRP) & Method Length:**
     *   **Analysis:** Several classes and methods exhibit opportunities for improved separation of concerns and reduced complexity.
         *   **`InterceptorGenerator.cs`:** The `GetAttributedMethodsFromReferences` and `GetAllTypes` methods could be extracted into a dedicated `SymbolDiscovery` or `AssemblyAnalyzer` utility class to keep the generator focused on orchestration.
         *   **`MethodAnalyzer.cs`:** `AnalyzeMethodDeclaration` and `AnalyzeTypeDeclaration` could be further specialized or have their attribute checking logic extracted to reduce duplication and improve clarity.

@@ -172,12 +172,15 @@ public class InterceptorGenerator : IIncrementalGenerator
 
             foreach (var entry in attributedMethodsArr)
             {
-                if (entry.Diagnostic != null)
+                if (entry?.Diagnostic != null)
                     spc.ReportDiagnostic(entry.Diagnostic);
             }
 
-            var interceptorsByNamespace = InterceptorDataProcessor.Process(attributedMethodsArr, callSitesArr);
-            var generatedCode = SourceCodeGenerator.Generate(interceptorsByNamespace, assemblyName);
+            var interceptorsByNamespace = InterceptorDataProcessor.Process(
+                attributedMethodsArr.Where(x => x != null).ToImmutableArray(),
+                callSitesArr.Where(x => x != null).ToImmutableArray()
+            );
+            var generatedCode = SourceCodeGenerator.Generate(interceptorsByNamespace);
 
             spc.AddSource("ObservatorInterceptors.g.cs", SourceText.From(generatedCode, System.Text.Encoding.UTF8));
         });

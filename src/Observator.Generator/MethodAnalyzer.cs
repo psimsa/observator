@@ -9,7 +9,7 @@ namespace Observator.Generator;
 
 public static class MethodAnalyzer
 {
-    public static MethodToInterceptInfo AnalyzeMethodDeclaration(SyntaxNode node, GeneratorSyntaxContext ctx, CancellationToken ct)
+    public static MethodToInterceptInfo? AnalyzeMethodDeclaration(SyntaxNode node, GeneratorSyntaxContext ctx, CancellationToken ct)
     {
         var methodDecl = (MethodDeclarationSyntax)node;
         var model = ctx.SemanticModel;
