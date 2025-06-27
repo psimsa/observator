@@ -20,6 +20,7 @@ public static class MethodAnalyzer
 
         var traceAttr = attributes.FirstOrDefault(attr =>
             attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
         // Removed interfaceTraceAttr check
@@ -47,6 +48,7 @@ public static class MethodAnalyzer
     {
         var typeAttr = typeSymbol.GetAttributes().FirstOrDefault(attr =>
             attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
 

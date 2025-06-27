@@ -6,7 +6,7 @@ namespace Observator.Generator;
 
 public record InterceptorCandidateInfo(
     IMethodSymbol MethodSymbol,
-    MethodDeclarationSyntax MethodDeclaration,
+    MethodDeclarationSyntax? MethodDeclaration,
     InvocationExpressionSyntax Invocation,
     InterceptableLocation Location
 );

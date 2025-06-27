@@ -1,5 +1,4 @@
 using Xunit;
-using Observator.Generator;
 
 namespace TestApp;
 

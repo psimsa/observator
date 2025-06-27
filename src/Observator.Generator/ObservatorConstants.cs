@@ -4,8 +4,10 @@ namespace Observator.Generator;
 public static class ObservatorConstants
 {
     public const string ObservatorTraceAttributeFullName = "Observator.Abstractions.ObservatorTraceAttribute";
+    public const string ObservatorGeneratedTestLibObservatorTraceAttributeFullName = "Observator.Generated.TestLib.ObservatorTraceAttribute";
     public const string ObservatorTraceAttributeName = "ObservatorTraceAttribute";
     public const string ObservatorTraceShortName = "ObservatorTrace";
+    public const string ObservatorAbstractionsAssemblyName = "Observator.Abstractions";
     // Removed ObservatorInterfaceTraceAttribute constants
     public const string TaskReturnType = "Task";
     public const string ValueTaskReturnType = "ValueTask";

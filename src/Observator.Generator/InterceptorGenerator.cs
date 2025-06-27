@@ -25,21 +25,52 @@ public class InterceptorGenerator : IIncrementalGenerator
         var interfaceMethods = RegisterInterfaceMethodProvider(context);
         var externalAttributedMethods = RegisterExternalAttributedMethodProvider(context);
         var allAttributedMethods = CombineAllAttributedMethods(attributedMethods, interfaceMethods, externalAttributedMethods);
-        var callSites = RegisterCallSiteProvider(context);
+        // Get call sites from all syntax trees in the current compilation and referenced source projects
+        var allCallSites = context.CompilationProvider.SelectMany((compilation, ct) =>
+        {
+            var allSyntaxTrees = new List<SyntaxTree>(compilation.SyntaxTrees);
+
+            foreach (var reference in compilation.References)
+            {
+                if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol)
+                {
+                    // If the reference is a CompilationReference, it means it's a source project reference
+                    // and we can access its syntax trees.
+                    if (reference is CompilationReference compRef)
+                    {
+                        allSyntaxTrees.AddRange(compRef.Compilation.SyntaxTrees);
+                    }
+                }
+            }
+
+            return allSyntaxTrees.SelectMany(tree =>
+                tree.GetRoot(ct).DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>());
+        })
+        .Combine(context.CompilationProvider)
+        .Select((tuple, ct) =>
+        {
+            var invocation = tuple.Item1;
+            var compilation = tuple.Item2;
+            var model = compilation.GetSemanticModel(invocation.SyntaxTree);
+            return CallSiteAnalyzer.AnalyzeInvocationExpression(invocation, model, ct);
+        })
+        .Where(x => x != null)
+        .Select((x, _) => x!);
         var assemblyInfo = RegisterAssemblyInfoProvider(context);
-        var combined = CombineAllData(allAttributedMethods, callSites, assemblyInfo);
+        var combined = CombineAllData(allAttributedMethods, allCallSites, assemblyInfo);
+
 
         RegisterSourceOutput(context, combined);
     }
 
-    private static IncrementalValuesProvider<MethodToInterceptInfo?> RegisterAttributedMethodProvider(IncrementalGeneratorInitializationContext context)
+    private static IncrementalValuesProvider<MethodToInterceptInfo> RegisterAttributedMethodProvider(IncrementalGeneratorInitializationContext context)
     {
         return context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: (node, _) => node is MethodDeclarationSyntax,
                 transform: (ctx, ct) => MethodAnalyzer.AnalyzeMethodDeclaration(ctx.Node, ctx, ct))
             .Where(x => x != null)
-            .Select((x, _) => x);
+            .Select((x, _) => x!); // Add null-forgiving operator as we've filtered out nulls
     }
 
     private static IncrementalValuesProvider<MethodToInterceptInfo> RegisterInterfaceMethodProvider(IncrementalGeneratorInitializationContext context)
@@ -61,49 +92,55 @@ public class InterceptorGenerator : IIncrementalGenerator
                             )
                     ),
                 transform: (ctx, ct) =>
-                    MethodAnalyzer.AnalyzeTypeDeclaration(
-                        ctx.SemanticModel.GetDeclaredSymbol((InterfaceDeclarationSyntax)ctx.Node, ct) as INamedTypeSymbol
-                    )
-            )
-            .Where(x => x != null)
-            .SelectMany((x, _) => x);
-    }
-
-    private static IncrementalValueProvider<List<MethodToInterceptInfo>> RegisterExternalAttributedMethodProvider(IncrementalGeneratorInitializationContext context)
-    {
-        return context.CompilationProvider.Select((compilation, _) =>
-        {
-            return GetAttributedMethodsFromReferences(compilation);
-        });
-    }
-
-    private static List<MethodToInterceptInfo> GetAttributedMethodsFromReferences(Compilation compilation)
-    {
-        var results = new List<MethodToInterceptInfo>();
-        foreach (var reference in compilation.References)
-        {
-            var asmSymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
-            if (asmSymbol == null) continue;
-
-            foreach (var type in GetAllTypes(asmSymbol.GlobalNamespace))
-            {
-                foreach (var method in type.GetMembers().OfType<IMethodSymbol>())
                 {
-                    var hasTraceAttr = method.GetAttributes().Any(attr =>
+                    var symbol = ctx.SemanticModel.GetDeclaredSymbol((InterfaceDeclarationSyntax)ctx.Node, ct) as INamedTypeSymbol;
+                    if (symbol == null)
                     {
-                        var attrClass = attr.AttributeClass;
-                        if (attrClass == null) return false;
-                        var attrName = attrClass.ToDisplayString();
-                        return attrName == ObservatorConstants.ObservatorTraceAttributeFullName ||
-                               attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-                               attrClass.Name == ObservatorConstants.ObservatorTraceShortName;
-                    });
-                    if (hasTraceAttr)
-                        results.Add(new MethodToInterceptInfo(method));
+                        return Enumerable.Empty<MethodToInterceptInfo>();
+                    }
+                    return MethodAnalyzer.AnalyzeTypeDeclaration(symbol);
                 }
-            }
-        }
-        return results;
+            )
+            .SelectMany((x, _) => x!); // Add null-forgiving operator as we've filtered out nulls
+    }
+
+    private static IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> RegisterExternalAttributedMethodProvider(IncrementalGeneratorInitializationContext context)
+    {
+        var relevantAssemblySymbols = context.CompilationProvider
+            .SelectMany((compilation, _) =>
+            {
+                var relevantAssemblies = new List<IAssemblySymbol>();
+                foreach (var reference in compilation.References)
+                {
+                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol)
+                    {
+                        // For simplicity, consider all referenced assemblies as potentially relevant for now.
+                        // A more precise filter can be added if needed, but the core issue seems to be
+                        // identifying attributed methods and call sites within these assemblies.
+                        relevantAssemblies.Add(asmSymbol);
+                    }
+                }
+                return relevantAssemblies;
+            });
+
+        var attributedMethods = relevantAssemblySymbols
+            .SelectMany((asmSymbol, _) => GetAllTypes(asmSymbol.GlobalNamespace))
+            .SelectMany((typeSymbol, _) => typeSymbol.GetMembers().OfType<IMethodSymbol>())
+            .Where(methodSymbol =>
+            {
+                return methodSymbol.GetAttributes().Any(attr =>
+                {
+                    var attrClass = attr.AttributeClass;
+                    if (attrClass == null) return false;
+                    return attrClass.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                           attrClass.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
+                           attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
+                           attrClass.Name == ObservatorConstants.ObservatorTraceShortName;
+                });
+            })
+            .Select((methodSymbol, _) => new MethodToInterceptInfo(methodSymbol, null, false)); // Use constructor for external methods
+
+        return attributedMethods.Collect(); // Collect all results into an ImmutableArray
     }
 
     private static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceSymbol ns)
@@ -116,30 +153,28 @@ public class InterceptorGenerator : IIncrementalGenerator
     }
 
     private static IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> CombineAllAttributedMethods(
-        IncrementalValuesProvider<MethodToInterceptInfo?> attributedMethods,
+        IncrementalValuesProvider<MethodToInterceptInfo> attributedMethods,
         IncrementalValuesProvider<MethodToInterceptInfo> interfaceMethods,
-        IncrementalValueProvider<List<MethodToInterceptInfo>> externalAttributedMethods)
+        IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> externalAttributedMethods)
     {
-        return attributedMethods.Collect()
+        var localAndInterfaceMethods = attributedMethods
+            .Collect()
             .Combine(interfaceMethods.Collect())
-            .Select((tuple, _) => tuple.Left.Concat(tuple.Right).ToImmutableArray())
+            .Select((tuple, _) => tuple.Left.AddRange(tuple.Right));
+
+        return localAndInterfaceMethods
             .Combine(externalAttributedMethods)
-            .Select((tuple, _) =>
-            {
-                var localAndInterface = tuple.Left;
-                var external = tuple.Right ?? new List<MethodToInterceptInfo>();
-                return localAndInterface.AddRange(external);
-            });
+            .Select((tuple, _) => tuple.Left.AddRange(tuple.Right));
     }
 
-    private static IncrementalValuesProvider<InvocationCallSiteInfo?> RegisterCallSiteProvider(IncrementalGeneratorInitializationContext context)
+    private static IncrementalValuesProvider<InvocationCallSiteInfo> RegisterCallSiteProvider(IncrementalGeneratorInitializationContext context)
     {
         return context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: (node, _) => node is InvocationExpressionSyntax,
-                transform: (ctx, ct) => CallSiteAnalyzer.AnalyzeInvocationExpression(ctx.Node, ctx, ct))
+                transform: (ctx, ct) => CallSiteAnalyzer.AnalyzeInvocationExpression(ctx.Node, ctx.SemanticModel, ct)) // Pass ctx.SemanticModel
             .Where(x => x != null)
-            .Select((x, _) => x);
+            .Select((x, _) => x!); // Add null-forgiving operator as we've filtered out nulls
     }
 
     private static IncrementalValueProvider<string> RegisterAssemblyInfoProvider(IncrementalGeneratorInitializationContext context)
@@ -151,18 +186,18 @@ public class InterceptorGenerator : IIncrementalGenerator
         });
     }
 
-    private static IncrementalValueProvider<(ImmutableArray<MethodToInterceptInfo>, ImmutableArray<InvocationCallSiteInfo?>, string)> CombineAllData(
+    private static IncrementalValueProvider<(ImmutableArray<MethodToInterceptInfo>, ImmutableArray<InvocationCallSiteInfo>, string)> CombineAllData(
         IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> allAttributedMethods,
-        IncrementalValuesProvider<InvocationCallSiteInfo?> callSites,
+        IncrementalValuesProvider<InvocationCallSiteInfo> callSites, // Changed to non-nullable
         IncrementalValueProvider<string> assemblyInfo)
     {
-        return allAttributedMethods.Combine(callSites.Collect()).Combine(assemblyInfo)
+        return allAttributedMethods.Combine(callSites.Collect()).Combine(assemblyInfo) // callSites.Collect() will now return ImmutableArray<InvocationCallSiteInfo>
             .Select((triple, _) => (triple.Left.Left, triple.Left.Right, triple.Right));
     }
 
     private static void RegisterSourceOutput(
         IncrementalGeneratorInitializationContext context,
-        IncrementalValueProvider<(ImmutableArray<MethodToInterceptInfo>, ImmutableArray<InvocationCallSiteInfo?>, string)> combined)
+        IncrementalValueProvider<(ImmutableArray<MethodToInterceptInfo>, ImmutableArray<InvocationCallSiteInfo>, string)> combined)
     {
         context.RegisterSourceOutput(combined, (spc, triple) =>
         {
@@ -172,13 +207,13 @@ public class InterceptorGenerator : IIncrementalGenerator
 
             foreach (var entry in attributedMethodsArr)
             {
-                if (entry?.Diagnostic != null)
+                if (entry.Diagnostic != null)
                     spc.ReportDiagnostic(entry.Diagnostic);
             }
 
             var interceptorsByNamespace = InterceptorDataProcessor.Process(
-                attributedMethodsArr.Where(x => x != null).ToImmutableArray(),
-                callSitesArr.Where(x => x != null).ToImmutableArray()
+                attributedMethodsArr,
+                callSitesArr
             );
             var generatedCode = SourceCodeGenerator.Generate(interceptorsByNamespace);
 
