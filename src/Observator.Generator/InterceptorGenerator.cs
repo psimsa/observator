@@ -82,13 +82,13 @@ public class InterceptorGenerator : IIncrementalGenerator
                     (
                         ids.AttributeLists.SelectMany(al => al.Attributes)
                             .Any(attr =>
-                                attr.Name.ToString().Contains("ObservatorTrace")
+                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceAttributeName)
                             )
                         ||
                         ids.Members.OfType<MethodDeclarationSyntax>()
                             .SelectMany(m => m.AttributeLists.SelectMany(al => al.Attributes))
                             .Any(attr =>
-                                attr.Name.ToString().Contains("ObservatorTrace")
+                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceAttributeName)
                             )
                     ),
                 transform: (ctx, ct) =>
