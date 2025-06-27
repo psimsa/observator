@@ -1,5 +1,7 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Observator.Generator.Helpers;
 
 namespace Observator.Generator.Generation;
 
@@ -8,7 +10,7 @@ internal static class AttributeGenerator
     public static NamespaceDeclarationSyntax GenerateCompilerServicesNamespace()
     {
         var attributeConstructor = SyntaxFactory.ConstructorDeclaration(ObservatorConstants.InterceptsLocationAttributeName)
-            .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+            .AddModifiers(SyntaxTemplates.PublicKeyword)
             .AddParameterListParameters(
                 SyntaxFactory.Parameter(SyntaxFactory.Identifier("version")).WithType(SyntaxFactory.ParseTypeName("int")),
                 SyntaxFactory.Parameter(SyntaxFactory.Identifier("data")).WithType(SyntaxFactory.ParseTypeName("string"))
@@ -16,16 +18,15 @@ internal static class AttributeGenerator
             .WithBody(SyntaxFactory.Block());
             
         var attributeClass = SyntaxFactory.ClassDeclaration(ObservatorConstants.InterceptsLocationAttributeName)
-            .AddModifiers(SyntaxFactory.Token(SyntaxKind.FileKeyword), SyntaxFactory.Token(SyntaxKind.SealedKeyword))
-            .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("Attribute")))
+            .AddModifiers(SyntaxTemplates.FileKeyword, SyntaxTemplates.SealedKeyword)
+            .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxTemplates.AttributeTypeName))
             .AddAttributeLists(
                 SyntaxFactory.AttributeList(
                     SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.Attribute(SyntaxFactory.ParseName("AttributeUsage"))
+                        SyntaxTemplates.AttributeUsageAttribute
                             .AddArgumentListArguments(
-                                SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression("AttributeTargets.Method")),
-                                SyntaxFactory.AttributeArgument(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression))
-                                    .WithNameEquals(SyntaxFactory.NameEquals(SyntaxFactory.IdentifierName("AllowMultiple")))
+                                SyntaxTemplates.AttributeTargetsMethodArgument,
+                                SyntaxTemplates.AllowMultipleTrueArgument
                             )
                     )
                 )

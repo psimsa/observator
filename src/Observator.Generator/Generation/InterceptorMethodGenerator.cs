@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Observator.Generator.Helpers;
 
 namespace Observator.Generator.Generation;
 
@@ -23,22 +24,22 @@ internal static class InterceptorMethodGenerator
             
         var modifiers = new List<SyntaxToken>
         {
-            SyntaxFactory.Token(SyntaxKind.PublicKeyword),
-            SyntaxFactory.Token(SyntaxKind.StaticKeyword)
+            SyntaxTemplates.PublicKeyword,
+            SyntaxTemplates.StaticKeyword
         };
 
         if (isAsync)
         {
-            modifiers.Add(SyntaxFactory.Token(SyntaxKind.AsyncKeyword));
+            modifiers.Add(SyntaxTemplates.AsyncKeyword);
         }
             
         var attributes = callList.Select(call =>
             SyntaxFactory.AttributeList(
                 SyntaxFactory.SingletonSeparatedList(
-                    SyntaxFactory.Attribute(SyntaxFactory.ParseName("InterceptsLocation"))
+                    SyntaxTemplates.InterceptsLocationAttribute
                         .AddArgumentListArguments(
-                            SyntaxFactory.AttributeArgument(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(call.Location.Version))),
-                            SyntaxFactory.AttributeArgument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(call.Location.Data)))
+                            SyntaxFactory.AttributeArgument(SyntaxTemplates.NumericLiteralExpression(call.Location.Version)),
+                            SyntaxFactory.AttributeArgument(SyntaxTemplates.StringLiteralExpression(call.Location.Data))
                         )
                 )
             )
@@ -48,9 +49,7 @@ internal static class InterceptorMethodGenerator
             ? callList[0].MethodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
             : method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        var thisParameter = SyntaxFactory.Parameter(SyntaxFactory.Identifier("@source"))
-            .AddModifiers(SyntaxFactory.Token(SyntaxKind.ThisKeyword))
-            .WithType(SyntaxFactory.ParseTypeName(thisType));
+        var thisParameter = SyntaxTemplates.ThisSourceParameter(thisType);
 
         var allParameters = new[] { thisParameter }.Concat(parameters);
 
@@ -68,11 +67,7 @@ internal static class InterceptorMethodGenerator
         var isAsync = method.ReturnType.Name == ObservatorConstants.TaskReturnType || method.ReturnType.Name == ObservatorConstants.ValueTaskReturnType;
 
         var invocation = SyntaxFactory.InvocationExpression(
-            SyntaxFactory.MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName("@source"),
-                SyntaxFactory.IdentifierName(method.Name)
-            )
+            SyntaxTemplates.SimpleMemberAccessExpression(SyntaxTemplates.ThisSourceIdentifierName, SyntaxFactory.IdentifierName(method.Name))
         ).WithArgumentList(
             SyntaxFactory.ArgumentList(
                 SyntaxFactory.SeparatedList(
@@ -91,38 +86,27 @@ internal static class InterceptorMethodGenerator
             .WithBlock(SyntaxFactory.Block(invocationStatement))
             .WithCatches(
                 SyntaxFactory.SingletonList(
-                    SyntaxFactory.CatchClause()
-                        .WithDeclaration(SyntaxFactory.CatchDeclaration(SyntaxFactory.ParseTypeName("Exception"), SyntaxFactory.Identifier("exception")))
-                        .WithBlock(SyntaxFactory.Block(
-                            SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(ObservatorConstants.ActivitySetStatusError)),
-                            SyntaxFactory.ThrowStatement()
-                        ))
+                    SyntaxTemplates.ExceptionCatchClause(
+                        SyntaxFactory.Block(
+                            SyntaxTemplates.ActivitySetStatusErrorStatement,
+                            SyntaxTemplates.ThrowStatement
+                        )
+                    )
                 )
             )
             .WithFinally(
                 SyntaxFactory.FinallyClause(
                     SyntaxFactory.Block(
-                        SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(ObservatorConstants.ActivitySetStatusOk))
+                        SyntaxTemplates.ActivitySetStatusOkStatement
                     )
                 )
             );
 
-        var activityCurrent = SyntaxFactory.MemberAccessExpression(
-            SyntaxKind.SimpleMemberAccessExpression,
-            SyntaxFactory.IdentifierName("Activity"),
-            SyntaxFactory.IdentifierName("Current")
-        );
+        var activityCurrent = SyntaxTemplates.ActivityCurrentMemberAccess;
 
-        var conditionalSource = SyntaxFactory.ConditionalAccessExpression(
-            activityCurrent,
-            SyntaxFactory.MemberBindingExpression(SyntaxFactory.IdentifierName("Source"))
-        );
+        var conditionalSource = SyntaxTemplates.ActivitySourceConditionalAccess;
 
-        var startActivityAccess = SyntaxFactory.MemberAccessExpression(
-            SyntaxKind.SimpleMemberAccessExpression,
-            conditionalSource,
-            SyntaxFactory.IdentifierName("StartActivity")
-        );
+        var startActivityAccess = SyntaxTemplates.ActivityStartActivityMemberAccess;
 
         var argumentList = SyntaxFactory.ArgumentList(
             SyntaxFactory.SingletonSeparatedList(
@@ -134,7 +118,7 @@ internal static class InterceptorMethodGenerator
 
         var activityInvocation = SyntaxFactory.InvocationExpression(startActivityAccess, argumentList);
 
-        var variableDeclaration = SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName("var"))
+        var variableDeclaration = SyntaxFactory.VariableDeclaration(SyntaxTemplates.VarTypeName)
             .AddVariables(
                 SyntaxFactory.VariableDeclarator("activity")
                     .WithInitializer(

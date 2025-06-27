@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Observator.Generator.Helpers;
 
 namespace Observator.Generator.Generation;
 
@@ -16,9 +17,9 @@ internal static class ClassGenerator
 
         var interceptorClass = SyntaxFactory.ClassDeclaration("ObservatorGenerated")
             .AddModifiers(
-                SyntaxFactory.Token(SyntaxKind.InternalKeyword),
-                SyntaxFactory.Token(SyntaxKind.StaticKeyword),
-                SyntaxFactory.Token(SyntaxKind.PartialKeyword))
+                SyntaxTemplates.InternalKeyword,
+                SyntaxTemplates.StaticKeyword,
+                SyntaxTemplates.PartialKeyword)
             .AddMembers(methods.ToArray());
 
         return interceptorClass;
