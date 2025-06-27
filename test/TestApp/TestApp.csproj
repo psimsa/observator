@@ -15,7 +15,6 @@
     <ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\TestLib\TestLib.csproj" />
     <ProjectReference Include="..\..\src\Observator.Abstractions\Observator.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

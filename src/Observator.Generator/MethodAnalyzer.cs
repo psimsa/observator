@@ -33,18 +33,11 @@ public static class MethodAnalyzer
         // If method is abstract or from interface, only allow if ObservatorTraceAttribute is present
         if (methodSymbol.IsAbstract || methodSymbol.ContainingType?.TypeKind == TypeKind.Interface)
         {
-            if (traceAttr == null)
-                return null;
             return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: true);
         }
 
         // If ObservatorTraceAttribute is present (and not interface method)
-        if (traceAttr != null)
-            return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: false);
-
-        // Removed interfaceTraceAttr check
-
-        return null;
+        return new MethodToInterceptInfo(methodSymbol, methodDecl, null, isInterfaceMethod: false);
     }
 
     /// <summary>
@@ -64,7 +57,7 @@ public static class MethodAnalyzer
         {
             // Only public, non-static, non-constructor methods
             if (member.DeclaredAccessibility == Accessibility.Public &&
-                member.IsStatic &&
+                !member.IsStatic &&
                 member.MethodKind == MethodKind.Ordinary)
             {
                 // If method itself has ObservatorTraceAttribute, prefer method-level settings

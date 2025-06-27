@@ -18,18 +18,29 @@ public static class InterceptorDataProcessor
             .ToList();
 
         // Match call sites to valid methods using LINQ for clarity
-        var callSiteInfos = (
-            from callEntry in callSites
-            let invocation = callEntry.Invocation
-            let targetMethod = callEntry.TargetMethod
-            let location = callEntry.Location
-            from validEntry in validMethods
-            let methodSymbol = validEntry.MethodSymbol
-            let methodDecl = validEntry.MethodDeclaration
-            where SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition)
-                  && SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType)
-            select new InterceptorCandidateInfo(methodSymbol, methodDecl, invocation, location)
-        ).ToList();
+        // Match call sites to valid methods in a step-by-step, readable way
+        var callSiteInfos = new List<InterceptorCandidateInfo>();
+        foreach (var callEntry in callSites)
+        {
+            var invocation = callEntry.Invocation;
+            var targetMethod = callEntry.TargetMethod;
+            var location = callEntry.Location;
+
+            foreach (var validEntry in validMethods)
+            {
+                var methodSymbol = validEntry.MethodSymbol;
+                var methodDecl = validEntry.MethodDeclaration;
+
+                // Match by method definition and containing type
+                bool isSameMethod = SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition)
+                    && SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType);
+
+                if (isSameMethod)
+                {
+                    callSiteInfos.Add(new InterceptorCandidateInfo(methodSymbol, methodDecl, invocation, location));
+                }
+            }
+        }
 
         // Group by namespace
         var interceptorsByNamespace = new Dictionary<string, List<MethodInterceptorInfo>>();
@@ -46,7 +57,11 @@ public static class InterceptorDataProcessor
 
             // Find the original MethodToInterceptInfo to get IsInterfaceMethod
             var methodInfo = validMethods.FirstOrDefault(x => SymbolEqualityComparer.Default.Equals(x.MethodSymbol, method));
-            bool isInterfaceMethod = methodInfo?.IsInterfaceMethod ?? false;
+            bool isInterfaceMethod = false;
+            if (methodInfo != null)
+            {
+                isInterfaceMethod = methodInfo.IsInterfaceMethod;
+            }
             callList.Add(new MethodInterceptorInfo(method, location, isInterfaceMethod));
         }
 

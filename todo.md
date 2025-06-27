@@ -18,16 +18,16 @@ This document outlines areas for improvement in the Observator Roslyn code gener
         *   **`InterceptorDataProcessor.cs`:** The `Process` method performs multiple distinct operations (matching call sites, grouping data). Consider extracting the call site matching logic (e.g., `MatchCallSitesToMethods`) and the grouping logic (e.g., `GroupInterceptorsByNamespace`) into separate helper methods.
         *   **`SourceCodeGenerator.cs`:** The definition of `InterceptsLocationAttribute` is embedded in the `Generate` method and could be extracted. If `GenerateMethodCode` or `GenerateInterceptorBody_Extension` grow, they could be further broken down into smaller, more focused methods.
     *   **Step:** Refactor the identified methods and classes to adhere more closely to the SRP. Extract distinct responsibilities into new private methods or dedicated utility classes as appropriate. Aim to reduce the length and complexity of individual methods.
-*   **Redundant Checks in `MethodAnalyzer.cs`:**
+*   **[COMPLETED] Redundant Checks in `MethodAnalyzer.cs`:**
     *   **Analysis:** The `AnalyzeMethodDeclaration` method contains redundant checks for `traceAttr == null` after an initial check. The `interfaceTraceAttr` checks are also commented out but still present, indicating incomplete removal.
     *   **Step:** Remove redundant `traceAttr == null` checks. Fully remove or uncomment and re-implement `interfaceTraceAttr` checks if `ObservatorInterfaceTraceAttribute` is to be reintroduced. If not, remove all related code.
-*   **Clarity and Readability:**
+*   **[COMPLETED] Clarity and Readability:**
     *   **Analysis:** Some LINQ queries, while functional, could be broken down or commented for better readability, especially in `InterceptorDataProcessor.cs`.
     *   **Step:** Refactor complex LINQ queries into more readable, step-by-step operations or add comments explaining their purpose.
-*   **Magic Strings/Constants:**
+*   **[COMPLETED] Magic Strings/Constants:**
     *   **Analysis:** While `ObservatorConstants.cs` exists, some string comparisons (e.g., `attr.Name.ToString().Contains("ObservatorTrace")`) are still present in `InterceptorGenerator.cs` and `MethodAnalyzer.cs`.
     *   **Step:** Replace all magic string comparisons with references to `ObservatorConstants` where appropriate.
-*   **Potential Null Reference Exceptions:**
+*   **[COMPLETED] Potential Null Reference Exceptions:**
     *   **Analysis:** In `InterceptorDataProcessor.cs`, `methodInfo` can be null, leading to `isInterfaceMethod` being `false` even if it should be true.
     *   **Step:** Add null checks or use null-coalescing operators (`??`) to handle potential null `methodInfo` gracefully and ensure `isInterfaceMethod` is correctly determined.
 
@@ -42,6 +42,7 @@ This document outlines areas for improvement in the Observator Roslyn code gener
 *   **`MethodAnalyzer.AnalyzeTypeDeclaration` Logic:**
     *   **Analysis:** In `MethodAnalyzer.cs`, the `AnalyzeTypeDeclaration` method for interface methods has a condition `member.IsStatic` which is incorrect for interface methods (interfaces cannot have static methods in the context of what's being intercepted).
     *   **Step:** Correct the `member.IsStatic` condition in `AnalyzeTypeDeclaration` to accurately reflect interceptable interface methods.
+    *   **[COMPLETED]**
 *   **`InterceptorDataProcessor` `isInterfaceMethod` Handling:**
     *   **Analysis:** The logic for determining `isInterfaceMethod` in `InterceptorDataProcessor.cs` relies on finding the original `MethodToInterceptInfo`, which could be null.
     *   **Step:** Re-evaluate and refine the logic for `isInterfaceMethod` to ensure its accuracy, potentially by passing this information more directly from the `MethodAnalyzer`.
@@ -51,6 +52,7 @@ This document outlines areas for improvement in the Observator Roslyn code gener
 *   **Duplicate Project Reference in `TestApp.csproj`:**
     *   **Analysis:** `TestApp.csproj` contains a duplicate reference to `Observator.Generator.csproj`.
     *   **Step:** Remove the duplicate project reference from `TestApp.csproj`.
+    *   **[COMPLETED]**
 
 ### 4. Testability
 
