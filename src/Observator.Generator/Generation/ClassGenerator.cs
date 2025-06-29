@@ -12,15 +12,14 @@ internal static class ClassGenerator
     {
         var methods = methodGroup
             .GroupBy(g => g.MethodSymbol.Name)
-            .Select(x => InterceptorMethodGenerator.GenerateMethodCode(x.ToList()))
-            .ToList();
+            .Select(x => InterceptorMethodGenerator.GenerateMethodCode(x.ToList()));
 
         var interceptorClass = SyntaxFactory.ClassDeclaration("ObservatorGenerated")
             .AddModifiers(
                 SyntaxTemplates.InternalKeyword,
                 SyntaxTemplates.StaticKeyword,
                 SyntaxTemplates.PartialKeyword)
-            .AddMembers(methods.ToArray());
+            .AddMembers([.. methods]);
 
         return interceptorClass;
     }

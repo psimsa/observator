@@ -53,7 +53,7 @@ internal static class InterceptorMethodGenerator
 
         var allParameters = new[] { thisParameter }.Concat(parameters);
 
-        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}")
+        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}_{method.GetHashCode().ToString()}")
             .AddModifiers(modifiers.ToArray())
             .WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(allParameters)))
             .WithBody(GenerateInterceptorBody(method))
