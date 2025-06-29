@@ -1,5 +1,5 @@
 using Xunit;
-using Observator.Abstractions;
+using Observator;
 
 namespace TestLib;
 

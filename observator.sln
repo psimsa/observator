@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		todo.md = todo.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Observator.Abstractions", "src\Observator.Abstractions\Observator.Abstractions.csproj", "{DD1EE54C-D009-4FFD-A7A9-30C9E1940737}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Observator", "src\Observator\Observator.csproj", "{DD1EE54C-D009-4FFD-A7A9-30C9E1940737}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestLib", "test\TestLib\TestLib.csproj", "{1AD8BA62-B656-4298-A11E-D273CD5F7B2C}"
 EndProject

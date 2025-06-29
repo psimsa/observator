@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 using Observator.Generator;
-using Observator.Abstractions;
+using Observator;
 
 namespace TestLib;
 
@@ -50,7 +50,7 @@ public class MethodAnalyzerUnitTests
     public void AnalyzeMethodDeclaration_ReturnsMethodInfo_WhenObservatorTraceAttributePresent()
     {
         var source = @"
-            using Observator.Abstractions;
+            using Observator;
             namespace Test
             {
                 public class MyClass
@@ -75,7 +75,7 @@ public class MethodAnalyzerUnitTests
     public void AnalyzeMethodDeclaration_ReturnsMethodInfo_ForInterfaceMethodWithAttribute()
     {
         var source = @"
-            using Observator.Abstractions;
+            using Observator;
             namespace Test
             {
                 public interface IMyInterface
@@ -100,7 +100,7 @@ public class MethodAnalyzerUnitTests
     public void AnalyzeMethodDeclaration_ReturnsMethodInfo_ForAbstractMethodWithAttribute()
     {
         var source = @"
-            using Observator.Abstractions;
+            using Observator;
             namespace Test
             {
                 public abstract class MyAbstractClass
@@ -148,7 +148,7 @@ public class MethodAnalyzerUnitTests
     public void AnalyzeTypeDeclaration_ReturnsPublicMethods_WhenObservatorTraceAttributeOnType()
     {
         var source = @"
-            using Observator.Abstractions;
+            using Observator;
             namespace Test
             {
                 [ObservatorTrace]
@@ -177,7 +177,7 @@ public class MethodAnalyzerUnitTests
     public void AnalyzeTypeDeclaration_ExcludesMethodsWithExplicitObservatorTraceAttribute()
     {
         var source = @"
-            using Observator.Abstractions;
+            using Observator;
             namespace Test
             {
                 [ObservatorTrace]

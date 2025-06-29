@@ -1,4 +1,4 @@
-﻿using Observator.Abstractions;
+﻿using Observator;
 
 namespace TestLib;
 
