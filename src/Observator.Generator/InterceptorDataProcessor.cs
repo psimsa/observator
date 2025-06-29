@@ -32,9 +32,7 @@ public static class InterceptorDataProcessor
                 var methodDecl = validEntry.MethodDeclaration;
 
                 // Match by method definition and containing type
-                bool isSameMethod = SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition)
-                    //&& SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, methodSymbol.ContainingType)
-                    ;
+                bool isSameMethod = SymbolEqualityComparer.Default.Equals(targetMethod.OriginalDefinition, methodSymbol.OriginalDefinition);
 
                 if (isSameMethod)
                 {
