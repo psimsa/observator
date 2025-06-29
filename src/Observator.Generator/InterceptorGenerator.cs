@@ -24,23 +24,11 @@ public class InterceptorGenerator : IIncrementalGenerator
         // Get call sites from all syntax trees in the current compilation and referenced source projects
         var allCallSites = context.CompilationProvider.SelectMany((compilation, ct) =>
         {
-            /*var allSyntaxTrees = new List<SyntaxTree>(compilation.SyntaxTrees);
+            var compRefSyntaxTrees = compilation.References.OfType<CompilationReference>()
+            .Where(r => compilation.GetAssemblyOrModuleSymbol(r) is IAssemblySymbol assembly)
+            .SelectMany(r => r.Compilation.SyntaxTrees);
 
-            foreach (var reference in compilation.References.OfType<CompilationReference>())
-            {
-                if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol)
-                {
-                    // If the reference is a CompilationReference, it means it's a source project reference
-                    // and we can access its syntax trees.
-                    if (reference is CompilationReference compRef)
-                    {
-                        allSyntaxTrees.AddRange(compRef.Compilation.SyntaxTrees);
-                    }
-                }
-            }*/
-
-
-            return compilation.SyntaxTrees.SelectMany(tree =>
+            return compilation.SyntaxTrees.Concat(compRefSyntaxTrees).SelectMany(tree =>
                 tree.GetRoot(ct).DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>());
         })
         .Combine(context.CompilationProvider)
@@ -53,9 +41,10 @@ public class InterceptorGenerator : IIncrementalGenerator
         })
         .Where(x => x != null)
         .Select((x, _) => x!);
-        var assemblyInfo = RegisterAssemblyInfoProvider(context);
-        var combined = CombineAllData(allAttributedMethods, allCallSites, assemblyInfo);
 
+        var assemblyInfo = RegisterAssemblyInfoProvider(context);
+
+        var combined = CombineAllData(allAttributedMethods, allCallSites, assemblyInfo);
 
         RegisterSourceOutput(context, combined);
     }
@@ -106,25 +95,10 @@ public class InterceptorGenerator : IIncrementalGenerator
         var relevantAssemblySymbols = context.CompilationProvider
             .SelectMany((compilation, _) =>
             {
-                var relevantAssemblies = new List<IAssemblySymbol>();
-                var symbols = compilation.GetSymbolsWithName(
-                    name => true // Get all symbols
-                );
-                foreach (var reference in compilation.References)
-                {
-                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol
-                    && ReferencesObservator(asmSymbol))
-                    {
-                        // For simplicity, consider all referenced assemblies as potentially relevant for now.
-                        // A more precise filter can be added if needed, but the core issue seems to be
-                        // identifying attributed methods and call sites within these assemblies.
-                        // var x = asmSymbol.TypeNames.ToList();
-                        // var y = asmSymbol.NamespaceNames.ToList();
-                        relevantAssemblies.Add(asmSymbol);
-                        //var z = ReferencesObservator(asmSymbol);
-                    }
-                }
-                return relevantAssemblies;
+                return compilation.References.Select(r => compilation.GetAssemblyOrModuleSymbol(r) is IAssemblySymbol asmSymbol && ReferencesObservator(asmSymbol)
+                        ? asmSymbol
+                        : null
+                ).Where(asm => asm != null); // Filter out nulls
 
                 static bool ReferencesObservator(IAssemblySymbol asmSymbol)
                 {
@@ -133,20 +107,10 @@ public class InterceptorGenerator : IIncrementalGenerator
             });
 
         var attributedMethods = relevantAssemblySymbols
-            .SelectMany((asmSymbol, _) => GetAllTypes(asmSymbol.GlobalNamespace))
+            .Where(asmSymbol => asmSymbol != null) // Filter out nulls
+            .SelectMany((asmSymbol, _) => GetAllTypes(asmSymbol!.GlobalNamespace))
             .SelectMany((typeSymbol, _) => typeSymbol.GetMembers().OfType<IMethodSymbol>())
-            .Where(methodSymbol =>
-            {
-                return methodSymbol.GetAttributes().Any(attr =>
-                {
-                    var attrClass = attr.AttributeClass;
-                    if (attrClass == null) return false;
-                    return attrClass.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
-                           attrClass.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
-                           attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-                           attrClass.Name == ObservatorConstants.ObservatorTraceShortName*/;
-                });
-            })
+            .Where(methodSymbol => methodSymbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName))
             .Select((methodSymbol, _) => new MethodToInterceptInfo(methodSymbol, null, false)); // Use constructor for external methods
 
         return attributedMethods.Collect(); // Collect all results into an ImmutableArray
