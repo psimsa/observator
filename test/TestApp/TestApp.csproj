@@ -5,13 +5,24 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- Enable interceptors preview (if needed in future phases) -->
-    <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);Observator.Generated</InterceptorsPreviewNamespaces>
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);TestApp</InterceptorsNamespaces>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);TestApp;TestLib;Foo</InterceptorsNamespaces>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\TestLib\TestLib.csproj" />
+    <ProjectReference Include="..\..\src\Observator.Abstractions\Observator.Abstractions.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.6" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <Import Project="..\TestShared\TestShared.projitems" Label="Shared" />
 </Project>
+
