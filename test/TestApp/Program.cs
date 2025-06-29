@@ -6,6 +6,7 @@ using TestLib;
 using System.Diagnostics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
+using Foo;
 
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(ObservatorInfrastructure.ActivitySourceName)
@@ -69,6 +70,10 @@ catch (NotImplementedException ex)
 var c = new Class1();
 c.Foo();
 c.Bar();
+
+var b = new Bar();
+b.Baz();
+
 // --- Interface Tracing Test Cases ---
 Console.WriteLine("\n--- Testing Interface Tracing ---");
 TestApp.IMyService myService = new TestApp.MyService();

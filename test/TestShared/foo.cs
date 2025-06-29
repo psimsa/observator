@@ -1,12 +1,14 @@
-namespace foo
+using Observator.Abstractions;
+
+namespace Foo;
+
+public class Bar
 {
-    public class bar
+    [ObservatorTrace]
+    public void Baz()
     {
-        public void baz()
-        {
-            // This is a test method in the foo.bar class.
-            // It does not do anything significant.
-            System.Console.WriteLine("Hello from foo.bar.baz()");
-        }
+        // This is a test method in the foo.bar class.
+        // It does not do anything significant.
+        System.Console.WriteLine("Hello from foo.bar.baz()");
     }
 }

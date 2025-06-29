@@ -111,7 +111,7 @@ internal static class InterceptorMethodGenerator
         var argumentList = SyntaxFactory.ArgumentList(
             SyntaxFactory.SingletonSeparatedList(
                 SyntaxFactory.Argument(
-                    SyntaxFactory.ParseExpression($"$\"{method.ContainingType.Name}.{method.Name}\"")
+                    SyntaxFactory.ParseExpression($"\"{method.ContainingNamespace.Name}.{method.ContainingType.Name}.{method.Name}\"")
                 )
             )
         );
