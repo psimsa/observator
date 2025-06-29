@@ -67,9 +67,11 @@ catch (NotImplementedException ex)
     Console.WriteLine($"Caught expected exception: {ex.Message}");
 }
 
-var c = new Class1();
+var c = new MyTestClass<bool>();
 c.Foo();
 c.Bar();
+c.Foo("Pavel");
+c.Foo<int>(42, "Pavel with int");
 
 var b = new Bar();
 b.Baz();

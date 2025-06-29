@@ -1,15 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 using Observator.Generator.Helpers;
 
 namespace Observator.Generator.Generation;
 
 internal static class InterceptorMethodGenerator
 {
-    public static MethodDeclarationSyntax GenerateMethodCode(List<MethodInterceptorInfo> callList)
+    public static MethodDeclarationSyntax GenerateMethodCode(List<MethodInterceptorInfo> callList, string signature)
     {
         var method = callList[0].MethodSymbol;
         var returnType = SyntaxFactory.ParseTypeName(method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
@@ -21,7 +23,7 @@ internal static class InterceptorMethodGenerator
         ).ToArray();
 
         var isAsync = method.ReturnType.Name == ObservatorConstants.TaskReturnType || method.ReturnType.Name == ObservatorConstants.ValueTaskReturnType;
-            
+
         var modifiers = new List<SyntaxToken>
         {
             SyntaxTemplates.PublicKeyword,
@@ -32,7 +34,7 @@ internal static class InterceptorMethodGenerator
         {
             modifiers.Add(SyntaxTemplates.AsyncKeyword);
         }
-            
+
         var attributes = callList.Select(call =>
             SyntaxFactory.AttributeList(
                 SyntaxFactory.SingletonSeparatedList(
@@ -43,26 +45,42 @@ internal static class InterceptorMethodGenerator
                         )
                 )
             )
-        ).ToList();
+        );
 
-        string thisType = callList[0].IsInterfaceMethod
-            ? callList[0].MethodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-            : method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var thisType = callList[0].IsInterfaceMethod
+            ? callList[0].MethodSymbol.ContainingType
+            : method.ContainingType;
 
-        var thisParameter = SyntaxTemplates.ThisSourceParameter(thisType);
+        var thisParameter = SyntaxTemplates.ThisSourceParameter(thisType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
         var allParameters = new[] { thisParameter }.Concat(parameters);
 
-        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}_{method.GetHashCode().ToString()}")
+        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}_{callList[0].Id}")
             .AddModifiers(modifiers.ToArray())
             .WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(allParameters)))
-            .WithBody(GenerateInterceptorBody(method))
-            .WithAttributeLists(SyntaxFactory.List(attributes));
+            .WithBody(GenerateInterceptorBody(method, signature))
+            .WithAttributeLists(SyntaxFactory.List(attributes))
+            .WithLeadingTrivia(SyntaxFactory.Comment($"// {signature}"));
+
+        var typeParameters = new List<TypeParameterSyntax>();
+
+        if (thisType.TypeArguments.Length > 0)
+        {
+            typeParameters.AddRange(thisType.TypeArguments.Select(t => SyntaxFactory.TypeParameter(t.Name)));
+        }
+        if (method.TypeParameters.Length > 0)
+        {
+            typeParameters.AddRange(method.TypeParameters.Select(tp => SyntaxFactory.TypeParameter(tp.Name)));
+        }
+        if (typeParameters.Count > 0)
+        {
+            methodDeclaration = methodDeclaration.WithTypeParameterList(SyntaxFactory.TypeParameterList(SyntaxFactory.SeparatedList(typeParameters)));
+        }
 
         return methodDeclaration;
     }
 
-    private static BlockSyntax GenerateInterceptorBody(IMethodSymbol method)
+    private static BlockSyntax GenerateInterceptorBody(IMethodSymbol method, string signature)
     {
         var isAsync = method.ReturnType.Name == ObservatorConstants.TaskReturnType || method.ReturnType.Name == ObservatorConstants.ValueTaskReturnType;
 
@@ -111,7 +129,7 @@ internal static class InterceptorMethodGenerator
         var argumentList = SyntaxFactory.ArgumentList(
             SyntaxFactory.SingletonSeparatedList(
                 SyntaxFactory.Argument(
-                    SyntaxFactory.ParseExpression($"\"{method.ContainingNamespace.Name}.{method.ContainingType.Name}.{method.Name}\"")
+                    SyntaxFactory.ParseExpression($"\"{method.ContainingNamespace.Name}.{method.ContainingType.Name}.{signature}\"")
                 )
             )
         );
