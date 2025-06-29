@@ -1,5 +1,8 @@
+using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -55,7 +58,7 @@ internal static class InterceptorMethodGenerator
 
         var allParameters = new[] { thisParameter }.Concat(parameters);
 
-        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}_{callList[0].Id}")
+        var methodDeclaration = SyntaxFactory.MethodDeclaration(returnType, $"Intercepts{methodName}")
             .AddModifiers(modifiers.ToArray())
             .WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(allParameters)))
             .WithBody(GenerateInterceptorBody(method, signature))

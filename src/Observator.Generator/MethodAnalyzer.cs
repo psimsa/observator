@@ -17,10 +17,7 @@ public static class MethodAnalyzer
         var attributes = methodSymbol.GetAttributes();
 
         var traceAttr = attributes.FirstOrDefault(attr =>
-            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
-            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
-            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName*/);
+            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName);
         // If ObservatorTraceAttribute is not present, skip
         if (traceAttr == null)
             return null;

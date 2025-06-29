@@ -14,5 +14,4 @@ public record MethodInterceptorInfo(
     public IMethodSymbol MethodSymbol { get; set; } = methodSymbol;
     public InterceptableLocation Location { get; set; } = location;
     public bool IsInterfaceMethod { get; set; } = isInterfaceMethod;
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
 }

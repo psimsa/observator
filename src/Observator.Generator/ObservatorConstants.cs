@@ -15,6 +15,6 @@ public static class ObservatorConstants
     public const string CompilerServicesNamespace = "namespace System.Runtime.CompilerServices";
     public const string InterceptsLocationAttributeName = "InterceptsLocationAttribute";
     public const string ActivityNameFormat = "Intercepted.{source.GetType().Name}.{methodName}";
-    public const string ActivitySetStatusError = "activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, exception.Message);";
-    public const string ActivitySetStatusOk = "activity?.SetStatus(activity.Status == System.Diagnostics.ActivityStatusCode.Unset ? System.Diagnostics.ActivityStatusCode.Ok : activity.Status, activity.StatusDescription)?.Dispose();";
+    public const string ActivitySetStatusError = "activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, exception.Message)";
+    public const string ActivitySetStatusOk = "activity?.SetStatus(activity.Status == System.Diagnostics.ActivityStatusCode.Unset ? System.Diagnostics.ActivityStatusCode.Ok : activity.Status, activity.StatusDescription)?.Dispose()";
 }
