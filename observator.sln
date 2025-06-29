@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Observator.Abstractions", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestLib", "test\TestLib\TestLib.csproj", "{1AD8BA62-B656-4298-A11E-D273CD5F7B2C}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "TestShared", "test\TestShared\TestShared.shproj", "{4931F461-5EAC-444E-BC13-CF64FE9B483C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -88,5 +90,13 @@ Global
 		{006421A5-4698-413E-98D7-580215B57FDA} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 		{DD1EE54C-D009-4FFD-A7A9-30C9E1940737} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1AD8BA62-B656-4298-A11E-D273CD5F7B2C} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
+		{4931F461-5EAC-444E-BC13-CF64FE9B483C} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B8BC59BC-A20A-4027-B5C8-E8561FEC2C3D}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		test\TestShared\TestShared.projitems*{006421a5-4698-413e-98d7-580215b57fda}*SharedItemsImports = 5
+		test\TestShared\TestShared.projitems*{4931f461-5eac-444e-bc13-cf64fe9b483c}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

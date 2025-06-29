@@ -36,5 +36,6 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
+  <Import Project="..\TestShared\TestShared.projitems" Label="Shared" />
 </Project>
 

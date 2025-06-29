@@ -24,9 +24,9 @@ public class InterceptorGenerator : IIncrementalGenerator
         // Get call sites from all syntax trees in the current compilation and referenced source projects
         var allCallSites = context.CompilationProvider.SelectMany((compilation, ct) =>
         {
-            var allSyntaxTrees = new List<SyntaxTree>(compilation.SyntaxTrees);
+            /*var allSyntaxTrees = new List<SyntaxTree>(compilation.SyntaxTrees);
 
-            foreach (var reference in compilation.References)
+            foreach (var reference in compilation.References.OfType<CompilationReference>())
             {
                 if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol)
                 {
@@ -37,9 +37,10 @@ public class InterceptorGenerator : IIncrementalGenerator
                         allSyntaxTrees.AddRange(compRef.Compilation.SyntaxTrees);
                     }
                 }
-            }
+            }*/
 
-            return allSyntaxTrees.SelectMany(tree =>
+
+            return compilation.SyntaxTrees.SelectMany(tree =>
                 tree.GetRoot(ct).DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>());
         })
         .Combine(context.CompilationProvider)
