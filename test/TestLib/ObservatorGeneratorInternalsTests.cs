@@ -1,7 +1,5 @@
 // Covers internal classes from Observator.Generator
-using System;
 using Xunit;
-using System.Reflection;
 
 namespace TestLib;
 

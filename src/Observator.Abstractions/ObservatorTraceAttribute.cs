@@ -1,5 +1,3 @@
-using System;
-
 namespace Observator.Abstractions;
 
 /// <summary>

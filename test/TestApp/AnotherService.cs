@@ -1,4 +1,4 @@
-using Observator.Generated.TestApp;
+using Observator.Abstractions;
 
 namespace TestApp;
 

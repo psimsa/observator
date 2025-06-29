@@ -1,5 +1,4 @@
-﻿using System;
-using Observator.Generated.TestApp;
+﻿using Observator.Generated.TestApp;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Microsoft.Extensions.Logging;
@@ -20,11 +19,6 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .Build();
 var acs = new ActivitySource(ObservatorInfrastructure.ActivitySourceName, ObservatorInfrastructure.Version);
 using var activity = acs.StartActivity("TestApp.Main", ActivityKind.Internal);
-
-// See https://aka.ms/new-console-template for more information
-Console.WriteLine("=== Observator Test App ===");
-Console.WriteLine($"ActivitySource Name: {ObservatorInfrastructure.ActivitySourceName}");
-Console.WriteLine($"ActivitySource Version: {ObservatorInfrastructure.Version}");
 
 using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().AddOpenTelemetry(logging =>
 {
@@ -83,5 +77,5 @@ Console.WriteLine($"DoSomething result: {result1}");
 
 int result2 = myService.Calculate(10, 20);
 Console.WriteLine($"Calculate result: {result2}");
-
+tracerProvider.ForceFlush();
 // To verify tracing, check for activity/log output or inspect Activity.Current if available.

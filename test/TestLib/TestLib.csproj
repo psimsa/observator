@@ -1,25 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<InterceptorsNamespaces>$(InterceptorsNamespaces);TestLib</InterceptorsNamespaces>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" />
-<ProjectReference Include="..\..\src\Observator.Abstractions\Observator.Abstractions.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="xunit" Version="2.9.3" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.14.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-	</ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <InterceptorsNamespaces>$(InterceptorsNamespaces);TestLib</InterceptorsNamespaces>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\..\src\Observator.Abstractions\Observator.Abstractions.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.14.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    </ItemGroup>
 </Project>

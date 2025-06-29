@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Observator.Generated.TestApp;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+
+using Observator.Abstractions;
 
 namespace TestApp;
 

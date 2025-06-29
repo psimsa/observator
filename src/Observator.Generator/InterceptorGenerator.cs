@@ -1,13 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using Observator.Generator.Diagnostics;
-using System.Diagnostics;
 using System.Collections.Immutable;
 
 namespace Observator.Generator;
@@ -82,13 +78,13 @@ public class InterceptorGenerator : IIncrementalGenerator
                     (
                         ids.AttributeLists.SelectMany(al => al.Attributes)
                             .Any(attr =>
-                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceAttributeName)
+                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceShortName)
                             )
                         ||
                         ids.Members.OfType<MethodDeclarationSyntax>()
                             .SelectMany(m => m.AttributeLists.SelectMany(al => al.Attributes))
                             .Any(attr =>
-                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceAttributeName)
+                                attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceShortName)
                             )
                     ),
                 transform: (ctx, ct) =>
@@ -110,17 +106,29 @@ public class InterceptorGenerator : IIncrementalGenerator
             .SelectMany((compilation, _) =>
             {
                 var relevantAssemblies = new List<IAssemblySymbol>();
+                var symbols = compilation.GetSymbolsWithName(
+                    name => true // Get all symbols
+                );
                 foreach (var reference in compilation.References)
                 {
-                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol)
+                    if (compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol asmSymbol
+                    && ReferencesObservator(asmSymbol))
                     {
                         // For simplicity, consider all referenced assemblies as potentially relevant for now.
                         // A more precise filter can be added if needed, but the core issue seems to be
                         // identifying attributed methods and call sites within these assemblies.
+                        // var x = asmSymbol.TypeNames.ToList();
+                        // var y = asmSymbol.NamespaceNames.ToList();
                         relevantAssemblies.Add(asmSymbol);
+                        //var z = ReferencesObservator(asmSymbol);
                     }
                 }
                 return relevantAssemblies;
+
+                static bool ReferencesObservator(IAssemblySymbol asmSymbol)
+                {
+                    return asmSymbol.Modules.Any(m => m.ReferencedAssemblySymbols.Any(a => a.MetadataName.Equals("Observator.Abstractions")));
+                }
             });
 
         var attributedMethods = relevantAssemblySymbols
@@ -132,10 +140,10 @@ public class InterceptorGenerator : IIncrementalGenerator
                 {
                     var attrClass = attr.AttributeClass;
                     if (attrClass == null) return false;
-                    return attrClass.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                    return attrClass.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
                            attrClass.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
                            attrClass.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-                           attrClass.Name == ObservatorConstants.ObservatorTraceShortName;
+                           attrClass.Name == ObservatorConstants.ObservatorTraceShortName*/;
                 });
             })
             .Select((methodSymbol, _) => new MethodToInterceptInfo(methodSymbol, null, false)); // Use constructor for external methods
@@ -148,8 +156,8 @@ public class InterceptorGenerator : IIncrementalGenerator
         foreach (var member in ns.GetTypeMembers())
             yield return member;
         foreach (var nested in ns.GetNamespaceMembers())
-        foreach (var t in GetAllTypes(nested))
-            yield return t;
+            foreach (var t in GetAllTypes(nested))
+                yield return t;
     }
 
     private static IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> CombineAllAttributedMethods(
@@ -165,16 +173,6 @@ public class InterceptorGenerator : IIncrementalGenerator
         return localAndInterfaceMethods
             .Combine(externalAttributedMethods)
             .Select((tuple, _) => tuple.Left.AddRange(tuple.Right));
-    }
-
-    private static IncrementalValuesProvider<InvocationCallSiteInfo> RegisterCallSiteProvider(IncrementalGeneratorInitializationContext context)
-    {
-        return context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: (node, _) => node is InvocationExpressionSyntax,
-                transform: (ctx, ct) => CallSiteAnalyzer.AnalyzeInvocationExpression(ctx.Node, ctx.SemanticModel, ct)) // Pass ctx.SemanticModel
-            .Where(x => x != null)
-            .Select((x, _) => x!); // Add null-forgiving operator as we've filtered out nulls
     }
 
     private static IncrementalValueProvider<string> RegisterAssemblyInfoProvider(IncrementalGeneratorInitializationContext context)

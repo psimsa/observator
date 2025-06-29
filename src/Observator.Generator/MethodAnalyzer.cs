@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
-using Observator.Generator.Diagnostics; // Add this line
 
 namespace Observator.Generator;
 
@@ -18,10 +17,10 @@ public static class MethodAnalyzer
         var attributes = methodSymbol.GetAttributes();
 
         var traceAttr = attributes.FirstOrDefault(attr =>
-            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
             attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
+            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName*/);
         // If ObservatorTraceAttribute is not present, skip
         if (traceAttr == null)
             return null;
@@ -42,10 +41,10 @@ public static class MethodAnalyzer
     public static IEnumerable<MethodToInterceptInfo> AnalyzeTypeDeclaration(INamedTypeSymbol typeSymbol)
     {
         var typeAttr = typeSymbol.GetAttributes().FirstOrDefault(attr =>
-            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+            attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
             attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorGeneratedTestLibObservatorTraceAttributeFullName ||
             attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
+            attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName*/);
 
         if (typeAttr == null)
             yield break;
@@ -59,9 +58,9 @@ public static class MethodAnalyzer
             {
                 // If method itself has ObservatorTraceAttribute, prefer method-level settings
                 var methodAttr = member.GetAttributes().FirstOrDefault(attr =>
-                    attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName ||
+                    attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName/* ||
                     attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceAttributeName ||
-                    attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName);
+                    attr.AttributeClass?.Name == ObservatorConstants.ObservatorTraceShortName*/);
 
                 yield return new MethodToInterceptInfo(member, null, isInterfaceMethod: true);
             }

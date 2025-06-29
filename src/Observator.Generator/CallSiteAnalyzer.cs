@@ -11,12 +11,9 @@ public static class CallSiteAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)node;
         var symbolInfo = model.GetSymbolInfo(invocation, ct);
-        var targetMethod = symbolInfo.Symbol as IMethodSymbol;
-        if (targetMethod == null) return null;
+        if (symbolInfo.Symbol is not IMethodSymbol targetMethod) return null;
 
         var interceptableLocation = model.GetInterceptableLocation(invocation, ct);
-        if (interceptableLocation == null) return null;
-
-        return new InvocationCallSiteInfo(invocation, targetMethod, interceptableLocation);
+        return interceptableLocation == null ? null : new InvocationCallSiteInfo(invocation, targetMethod, interceptableLocation);
     }
 }

@@ -2,7 +2,7 @@ using Observator.Abstractions;
 
 namespace TestApp;
 
-[ObservatorTrace]
+[ObservatorTraceAttribute]
 public interface IMyService
 {
     string DoSomething(string input);

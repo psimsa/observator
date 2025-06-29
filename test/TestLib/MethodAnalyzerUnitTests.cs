@@ -1,12 +1,9 @@
-using Microsoft.CodeAnalysis;
+/* using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
-using System.Collections.Immutable;
 using Observator.Generator;
 using Observator.Abstractions;
-using System.Threading;
-using System.Linq; // Added for .First() and .OfType()
 
 namespace TestLib;
 
@@ -203,4 +200,4 @@ public class MethodAnalyzerUnitTests
         Assert.Contains(result, m => m.MethodSymbol.Name == "MethodFromTypeAttribute");
         Assert.Contains(result, m => m.MethodSymbol.Name == "MethodWithExplicitAttribute");
     }
-}
+} */

@@ -46,7 +46,7 @@ public class InfrastructureGenerator : IIncrementalGenerator
         var traceAttrName = "ObservatorTraceAttribute";
 
         // Attribute class
-        var traceAttribute = sf.ClassDeclaration(traceAttrName)
+        /*var traceAttribute = sf.ClassDeclaration(traceAttrName)
             .AddModifiers(sf.Token(SyntaxKind.InternalKeyword), sf.Token(SyntaxKind.SealedKeyword))
             .AddBaseListTypes(
                 sf.SimpleBaseType(
@@ -79,7 +79,7 @@ public class InfrastructureGenerator : IIncrementalGenerator
                     .WithInitializer(
                         sf.EqualsValueClause(sf.LiteralExpression(SyntaxKind.FalseLiteralExpression)))
                     .WithSemicolonToken(sf.Token(SyntaxKind.SemicolonToken))
-            );
+            );*/
 
         // Infrastructure class
         var infraClass = sf.ClassDeclaration(className)
@@ -105,7 +105,7 @@ public class InfrastructureGenerator : IIncrementalGenerator
                 sf.UsingDirective(sf.ParseName("System.Diagnostics")),
                 sf.UsingDirective(sf.ParseName("System.Diagnostics.Metrics")),
                 sf.UsingDirective(sf.ParseName("System")))
-            .AddMembers(infraClass, traceAttribute);
+            .AddMembers(infraClass);
 
         // Compilation unit
         var cu = sf.CompilationUnit()
