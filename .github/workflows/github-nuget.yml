@@ -1,0 +1,31 @@
+name: Publish to NuGet
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Create version string (0.0.github_run_number-preview)
+        id: version
+        run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
+        if: github.ref != 'refs/heads/main'
+      - name: Create version string (0.0.github_run_number)
+        id: version
+        run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
+        if: github.ref == 'refs/heads/main'
+      - name: Create NuGet package
+        run: dotnet pack -c Release -o ./artifacts -p:Version=${VERSION} ./src/Observator
+      # - name: Publish package to nuget.org
+      #   run: dotnet nuget push ./artifacts/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/psimsa/index.json
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./artifacts/*.nupkg

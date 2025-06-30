@@ -3,10 +3,19 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>latest</LangVersion>
-        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-        <IsRoslynComponent>true</IsRoslynComponent>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Nullable>enable</Nullable>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <PackageId>$(AssemblyName)</PackageId>
+        <Authors>Pavel Simsa</Authors>
+        <Description>Code generator for Observator</Description>
+        <Copyright>MIT</Copyright>
+        <PackageProjectUrl>https://github.com/psimsa/observator</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/psimsa/observator</RepositoryUrl>
+        <Product>$(AssemblyName)</Product>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,5 +30,9 @@
     </ItemGroup>
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+        <None Include="..\..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
     </ItemGroup>
 </Project>
