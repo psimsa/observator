@@ -14,8 +14,8 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Build solution
-        run: dotnet build -c Release ./src/Observator.sln
-      - name: Create version string (0.0.github_run_number-preview on feature or 0.0.github_run_number on main)
+        run: dotnet build -c Release
+      - name: Create version string
         id: version
           # echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
         run: |
