@@ -28,10 +28,9 @@ Observator is an AOT-compatible source generator package that automatically inst
 - **Code Generation**: Emit both infrastructure code and method interceptors as separate source files
 
 ### Core Components
-1. **InfrastructureGenerator**: Generates per-assembly `ActivitySource`, `Meter`, and attribute definitions
-2. **InterceptorGenerator**: Creates method interceptors for attributed methods with observability instrumentation
-3. **Diagnostics System**: Provides compile-time warnings and errors to guide correct usage
-4. **Template System**: (Planned) Extensible code generation templates for different instrumentation patterns
+1. **InterceptorGenerator**: Creates method interceptors for attributed methods with observability instrumentation
+2. **Diagnostics System**: Provides compile-time warnings and errors to guide correct usage
+3. **Template System**: (Planned) Extensible code generation templates for different instrumentation patterns
 
 ### Key Design Principles
 - **Compile-Time Only**: All code generation happens during compilation, no runtime dependencies
