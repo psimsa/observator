@@ -11,7 +11,7 @@ Observator is an AOT-compatible source generator that automatically instruments 
 - **AOT-First Design**: Full compatibility with Native AOT compilation by eliminating runtime reflection.
 - **Zero Dependencies**: Only references `System.Diagnostics.DiagnosticSource`, which is built into .NET.
 - **Zero Configuration**: Works out-of-the-box with sensible defaults.
-- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods, classes, or interfaces with a simple `[ObservatorTrace]` attribute.
+- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods or interfaces with a simple `[ObservatorTrace]` attribute.
 - **Cross-Assembly Compatibility**: Supports instrumentation across project boundaries within a solution.
 - **High Performance**: Generates optimized code that adds minimal overhead to instrumented methods.
 - **Standards Compliant**: Generates code compatible with OpenTelemetry standards and .NET diagnostic conventions.
@@ -36,7 +36,7 @@ dotnet add package Observator
     namespace MyAwesomeApp;
 
     [ObservatorTrace]
-    public partial class MyService // Make sure the class is partial
+    public class MyService
     {
         public virtual string Greet(string name)
         {
@@ -44,8 +44,6 @@ dotnet add package Observator
         }
     }
     ```
-
-    **Important**: The class containing the method must be marked as `partial`.
 
 2.  **Configure your OpenTelemetry pipeline** to listen to the `ActivitySource` created by Observator.
 
@@ -68,21 +66,6 @@ dotnet add package Observator
         }
     }
     ```
-
-## Configuration
-
-The `[ObservatorTrace]` attribute provides properties to control the generated trace data:
-
-- `IncludeParameters` (default: `true`): Set to `false` to exclude method parameters from the trace.
-- `IncludeReturnValue` (default: `true`): Set to `false` to exclude the method's return value from the trace.
-
-```csharp
-[ObservatorTrace(IncludeParameters = false, IncludeReturnValue = false)]
-public partial class MyService
-{
-    // ...
-}
-```
 
 ## Building from Source
 
