@@ -13,6 +13,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Build solution
+        run: dotnet build -c Release ./src/Observator.sln
       - name: Create version string (0.0.github_run_number-preview on feature or 0.0.github_run_number on main)
         id: version
           # echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
@@ -23,7 +25,7 @@ jobs:
             echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
           fi
       - name: Create NuGet package
-        run: dotnet pack -c Release -o ./artifacts -p:Version=${VERSION} ./src/Observator
+        run: dotnet pack -c Release -o ./artifacts -p:Version=0.0.${VERSION} ./src/Observator
       # - name: Publish package to nuget.org
       #   run: dotnet nuget push ./artifacts/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/psimsa/index.json
       - name: Upload package
