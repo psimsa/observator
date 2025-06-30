@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-using Observator.Abstractions;
+using Observator;
 
 namespace TestApp;
 

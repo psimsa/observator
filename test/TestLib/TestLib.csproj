@@ -9,7 +9,7 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\Observator.Generator\Observator.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-        <ProjectReference Include="..\..\src\Observator.Abstractions\Observator.Abstractions.csproj" />
+        <ProjectReference Include="..\..\src\Observator\Observator.csproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />

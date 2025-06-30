@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+
+        <PackageId>$(AssemblyName)</PackageId>
+        <Authors>Pavel Simsa</Authors>
+        <Description>Generator of observability code for .NET</Description>
+        <Copyright>MIT</Copyright>
+        <PackageProjectUrl>https://github.com/psimsa/observator</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/psimsa/observator</RepositoryUrl>
+        <Product>$(AssemblyName)</Product>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Include="..\..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Observator.Generator\Observator.Generator.csproj" PrivateAssets="All" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="$(OutputPath)\Observator.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    </ItemGroup>
+</Project>

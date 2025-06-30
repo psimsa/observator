@@ -102,7 +102,7 @@ public class InterceptorGenerator : IIncrementalGenerator
 
                 static bool ReferencesObservator(IAssemblySymbol asmSymbol)
                 {
-                    return asmSymbol.Modules.Any(m => m.ReferencedAssemblySymbols.Any(a => a.MetadataName.Equals("Observator.Abstractions")));
+                    return asmSymbol.Modules.Any(m => m.ReferencedAssemblySymbols.Any(a => a.MetadataName.Equals("Observator")));
                 }
             });
 

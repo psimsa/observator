@@ -1,4 +1,4 @@
-namespace Observator.Abstractions;
+namespace Observator;
 
 /// <summary>
 /// Specifies that a class, interface, or method should be traced by Observator.

@@ -3,7 +3,7 @@ namespace Observator.Generator;
 
 public static class ObservatorConstants
 {
-    public const string ObservatorTraceAttributeFullName = "Observator.Abstractions.ObservatorTraceAttribute";
+    public const string ObservatorTraceAttributeFullName = "Observator.ObservatorTraceAttribute";
     public const string ObservatorTraceShortName = "ObservatorTrace";
     public const string TaskReturnType = "Task";
     public const string ValueTaskReturnType = "ValueTask";
