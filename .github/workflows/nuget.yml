@@ -15,6 +15,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
+      - name: Build solution
+        run: dotnet build -c Release
       - name: Fetch static secrets from Akeyless
         uses: akeyless-community/akeyless-github-action@v1.1.3
         id: fetch-secrets
@@ -26,6 +28,6 @@ jobs:
             - name: "/keys/nuget"
               output-name: "NUGET_API_KEY"
       - name: Create NuGet package
-        run: dotnet pack -c Release -o ./artifacts -p:Version=${GITHUB_REF#refs/tags/v}
+        run: dotnet pack -c Release -o ./artifacts -p:Version=${GITHUB_REF#refs/tags/v} ./src/Observator
       - name: Publish package to nuget.org
         run: dotnet nuget push ./artifacts/*.nupkg -k ${{ steps.fetch-secrets.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
