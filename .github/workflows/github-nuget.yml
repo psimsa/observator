@@ -13,14 +13,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Create version string (0.0.github_run_number-preview)
-        #id: version
-        run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
-        if: github.ref != 'refs/heads/main'
-      - name: Create version string (0.0.github_run_number)
-        #id: version
-        run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
-        if: github.ref == 'refs/heads/main'
+      - name: Create version string (0.0.github_run_number-preview on feature or 0.0.github_run_number on main)
+        id: version
+          # echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
+          else
+            echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
+          fi
       - name: Create NuGet package
         run: dotnet pack -c Release -o ./artifacts -p:Version=${VERSION} ./src/Observator
       # - name: Publish package to nuget.org
