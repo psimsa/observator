@@ -18,9 +18,9 @@ jobs:
         id: version
         run: |
           if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
+            echo "VERSION=${GITHUB_RUN_NUMBER}-preview" >> $GITHUB_ENV
           else
-            echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
+            echo "VERSION=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
           fi
       - name: Create NuGet package
         run: dotnet pack -c Release -o ./artifacts -p:Version=0.0.${VERSION} ./src/Observator
