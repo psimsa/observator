@@ -14,11 +14,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Create version string (0.0.github_run_number-preview)
-        id: version
+        #id: version
         run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')-preview" >> $GITHUB_ENV
         if: github.ref != 'refs/heads/main'
       - name: Create version string (0.0.github_run_number)
-        id: version
+        #id: version
         run: echo "VERSION=$(echo ${GITHUB_RUN_NUMBER} | sed 's/^0*//')" >> $GITHUB_ENV
         if: github.ref == 'refs/heads/main'
       - name: Create NuGet package
