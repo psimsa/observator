@@ -9,7 +9,7 @@ Observator is an AOT-compatible source generator that automatically instruments 
 ## Features
 
 - **AOT-First Design**: Full compatibility with Native AOT compilation by eliminating runtime reflection.
-- **Zero Dependencies**: Only references `System.Diagnostics.DiagnosticSource`, which is built into .NET.
+- **Zero Dependencies**: Only references `System.Diagnostics` namespace, which is built into .NET.
 - **Zero Configuration**: Works out-of-the-box with sensible defaults.
 - **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods, classes, or interfaces with a simple `[ObservatorTrace]` attribute.
 - **Cross-Assembly Compatibility**: Supports instrumentation across project boundaries within a solution.
