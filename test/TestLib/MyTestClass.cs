@@ -2,6 +2,7 @@
 
 namespace TestLib;
 
+// [ObservatorTraceAttribute] - This is a placeholder for potential future use of the ObservatorTraceAttribute on the class itself.
 public partial class MyTestClass<T>
 {
 

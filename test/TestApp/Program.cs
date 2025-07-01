@@ -1,5 +1,4 @@
-﻿using Observator.Generated.TestApp;
-using OpenTelemetry;
+﻿using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Microsoft.Extensions.Logging;
 using TestLib;
@@ -9,7 +8,7 @@ using OpenTelemetry.Logs;
 using Foo;
 
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-    .AddSource(ObservatorInfrastructure.ActivitySourceName)
+    .AddSource("TestApp")
     // The rest of your setup code goes here
     .AddConsoleExporter()
     .AddOtlpExporter(options =>
@@ -18,7 +17,7 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
         options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     })
     .Build();
-var acs = new ActivitySource(ObservatorInfrastructure.ActivitySourceName, ObservatorInfrastructure.Version);
+var acs = new ActivitySource("TestApp");
 using var activity = acs.StartActivity("TestApp.Main", ActivityKind.Internal);
 
 using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().AddOpenTelemetry(logging =>
