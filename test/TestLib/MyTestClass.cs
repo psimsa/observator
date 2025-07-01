@@ -2,6 +2,7 @@
 
 namespace TestLib;
 
+// [ObservatorTraceAttribute]
 public partial class MyTestClass<T>
 {
 

@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Observator.Generator.Diagnostics;
 
-internal static class DiagnosticDescriptors
+internal static partial class DiagnosticDescriptors
 {
     // Diagnostic descriptor for OBS006
     public static readonly DiagnosticDescriptor OBS006_StaticMethod = new DiagnosticDescriptor(

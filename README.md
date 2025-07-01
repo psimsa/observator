@@ -11,7 +11,7 @@ Observator is an AOT-compatible source generator that automatically instruments 
 - **AOT-First Design**: Full compatibility with Native AOT compilation by eliminating runtime reflection.
 - **Zero Dependencies**: Only references `System.Diagnostics.DiagnosticSource`, which is built into .NET.
 - **Zero Configuration**: Works out-of-the-box with sensible defaults.
-- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods or interfaces with a simple `[ObservatorTrace]` attribute.
+- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods, classes, or interfaces with a simple `[ObservatorTrace]` attribute.
 - **Cross-Assembly Compatibility**: Supports instrumentation across project boundaries within a solution.
 - **High Performance**: Generates optimized code that adds minimal overhead to instrumented methods.
 - **Standards Compliant**: Generates code compatible with OpenTelemetry standards and .NET diagnostic conventions.
@@ -28,13 +28,15 @@ dotnet add package Observator
 
 ### Usage
 
-1.  **Add the `[ObservatorTrace]` attribute** to any method, class, or interface you want to instrument. For classes and interfaces, all methods will be traced.
+1.  **Add the `[ObservatorTrace]` attribute** to any method, class, or interface you want to instrument. For classes and interfaces, all public instance methods will be traced.
+    - **Note:** You cannot use `[ObservatorTrace]` on both a class and its methods at the same time. If both are present, a compile-time error will be emitted.
 
     ```csharp
     using Observator;
 
     namespace MyAwesomeApp;
 
+    // Class-level usage (all methods instrumented)
     [ObservatorTrace]
     public class MyService
     {
@@ -42,6 +44,21 @@ dotnet add package Observator
         {
             return $"Hello, {name}!";
         }
+    }
+
+    // Method-level usage (only this method instrumented)
+    public class MyOtherService
+    {
+        [ObservatorTrace]
+        public string OnlyThisIsTraced() => "Traced!";
+    }
+
+    // Error: Do not combine class-level and method-level attributes
+    [ObservatorTrace]
+    public class InvalidService
+    {
+        [ObservatorTrace] // This will cause a compile-time error
+        public void Conflict() { }
     }
     ```
 

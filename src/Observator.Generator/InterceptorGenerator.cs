@@ -19,8 +19,9 @@ public class InterceptorGenerator : IIncrementalGenerator
     {
         var attributedMethods = RegisterAttributedMethodProvider(context);
         var interfaceMethods = RegisterInterfaceMethodProvider(context);
+        var classLevelMethods = RegisterClassLevelMethodProvider(context);
         var externalAttributedMethods = RegisterExternalAttributedMethodProvider(context);
-        var allAttributedMethods = CombineAllAttributedMethods(attributedMethods, interfaceMethods, externalAttributedMethods);
+        var allAttributedMethods = CombineAllAttributedMethods(attributedMethods, interfaceMethods, classLevelMethods, externalAttributedMethods);
         // Get call sites from all syntax trees in the current compilation and referenced source projects
         var allCallSites = context.CompilationProvider.SelectMany((compilation, ct) =>
         {
@@ -109,9 +110,43 @@ public class InterceptorGenerator : IIncrementalGenerator
         var attributedMethods = relevantAssemblySymbols
             .Where(asmSymbol => asmSymbol != null) // Filter out nulls
             .SelectMany((asmSymbol, _) => GetAllTypes(asmSymbol!.GlobalNamespace))
-            .SelectMany((typeSymbol, _) => typeSymbol.GetMembers().OfType<IMethodSymbol>())
-            .Where(methodSymbol => methodSymbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName))
-            .Select((methodSymbol, _) => new MethodToInterceptInfo(methodSymbol, null, false)); // Use constructor for external methods
+            .SelectMany((typeSymbol, _) =>
+            {
+                var results = new List<MethodToInterceptInfo>();
+                var hasClassLevel = typeSymbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName);
+                var methodSymbols = typeSymbol.GetMembers().OfType<IMethodSymbol>()
+                    .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsStatic && m.DeclaredAccessibility == Accessibility.Public);
+                if (hasClassLevel)
+                {
+                    var methodLevelDecorated = methodSymbols
+                        .Where(m => m.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName))
+                        .ToList();
+                    foreach (var method in methodSymbols)
+                    {
+                        Diagnostic? diag = null;
+                        if (methodLevelDecorated.Contains(method))
+                        {
+                            diag = Diagnostic.Create(
+                                Diagnostics.DiagnosticDescriptors.OBS007_ClassAndMethodLevelAttributeConflict,
+                                method.Locations.FirstOrDefault(),
+                                typeSymbol.Name, method.Name);
+                        }
+                        results.Add(new MethodToInterceptInfo(method, diag, false));
+                    }
+                }
+                else
+                {
+                    // Only method-level
+                    foreach (var method in methodSymbols)
+                    {
+                        if (method.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName))
+                        {
+                            results.Add(new MethodToInterceptInfo(method, null, false));
+                        }
+                    }
+                }
+                return results;
+            });
 
         return attributedMethods.Collect(); // Collect all results into an ImmutableArray
     }
@@ -128,16 +163,66 @@ public class InterceptorGenerator : IIncrementalGenerator
     private static IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> CombineAllAttributedMethods(
         IncrementalValuesProvider<MethodToInterceptInfo> attributedMethods,
         IncrementalValuesProvider<MethodToInterceptInfo> interfaceMethods,
+        IncrementalValuesProvider<MethodToInterceptInfo> classLevelMethods,
         IncrementalValueProvider<ImmutableArray<MethodToInterceptInfo>> externalAttributedMethods)
     {
-        var localAndInterfaceMethods = attributedMethods
+        var localAndInterfaceAndClassMethods = attributedMethods
             .Collect()
             .Combine(interfaceMethods.Collect())
+            .Select((tuple, _) => tuple.Left.AddRange(tuple.Right))
+            .Combine(classLevelMethods.Collect())
             .Select((tuple, _) => tuple.Left.AddRange(tuple.Right));
 
-        return localAndInterfaceMethods
+        return localAndInterfaceAndClassMethods
             .Combine(externalAttributedMethods)
             .Select((tuple, _) => tuple.Left.AddRange(tuple.Right));
+    }
+
+    /// <summary>
+    /// Finds classes decorated with ObservatorTrace and collects all their methods for interception.
+    /// Emits a diagnostic if both class and any method are decorated.
+    /// </summary>
+    private static IncrementalValuesProvider<MethodToInterceptInfo> RegisterClassLevelMethodProvider(IncrementalGeneratorInitializationContext context)
+    {
+        return context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: (node, _) => node is ClassDeclarationSyntax cds &&
+                    cds.AttributeLists.SelectMany(al => al.Attributes)
+                        .Any(attr => attr.Name.ToString().Contains(ObservatorConstants.ObservatorTraceShortName)),
+                transform: (ctx, ct) =>
+                {
+                    var classNode = (ClassDeclarationSyntax)ctx.Node;
+                    var semanticModel = ctx.SemanticModel;
+                    var classSymbol = semanticModel.GetDeclaredSymbol(classNode, ct) as INamedTypeSymbol;
+                    if (classSymbol == null)
+                        return Enumerable.Empty<MethodToInterceptInfo>();
+
+                    // Check for method-level ObservatorTrace attributes
+                    var methodSymbols = classSymbol.GetMembers().OfType<IMethodSymbol>()
+                        .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsStatic && m.DeclaredAccessibility == Accessibility.Public);
+
+                    var methodLevelDecorated = methodSymbols
+                        .Where(m => m.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == ObservatorConstants.ObservatorTraceAttributeFullName))
+                        .ToList();
+
+                    var results = new List<MethodToInterceptInfo>();
+                    foreach (var method in methodSymbols)
+                    {
+                        Diagnostic? diag = null;
+                        if (methodLevelDecorated.Contains(method))
+                        {
+                            // Emit error diagnostic: cannot use both class-level and method-level
+                        diag = Diagnostic.Create(
+                            Diagnostics.DiagnosticDescriptors.OBS007_ClassAndMethodLevelAttributeConflict,
+                            method.Locations.FirstOrDefault() ?? classNode.GetLocation(),
+                            classSymbol.Name, method.Name);
+                        }
+                        results.Add(new MethodToInterceptInfo(method, diag, false));
+                    }
+                    return results;
+                }
+            )
+            .SelectMany((x, _) => x!);
     }
 
     private static IncrementalValueProvider<string> RegisterAssemblyInfoProvider(IncrementalGeneratorInitializationContext context)

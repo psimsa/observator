@@ -10,7 +10,7 @@ Observator is an AOT-compatible source generator package that automatically inst
 - **AOT-First Design**: Provide complete compatibility with Native AOT compilation by eliminating runtime reflection and performing all code generation at compile-time
 - **Zero Dependencies**: Minimize external dependencies by only referencing `System.Diagnostics.DiagnosticSource` (built into .NET)
 - **Zero Configuration**: Work out-of-the-box with sensible defaults, requiring minimal developer intervention
-- **Attribute-Driven Instrumentation**: Enable selective instrumentation through simple method decoration with `[ObservatorTrace]`
+- **Attribute-Driven Instrumentation**: Enable selective instrumentation through simple decoration of methods, classes, or interfaces with `[ObservatorTrace]`
 - **Cross-Assembly Compatibility**: Support instrumentation across project boundaries within a solution
 
 ### Secondary Goals
@@ -53,7 +53,8 @@ Observator is an AOT-compatible source generator package that automatically inst
 - **Documentation**: Clear documentation of features, limitations, and best practices
 
 ### Limitations
-- **No Class-Level Attributes**: The `[ObservatorTrace]` attribute is only supported on methods and interfaces, not entire classes.
+- **Class-Level Attributes Supported**: The `[ObservatorTrace]` attribute can be applied to methods, classes, or interfaces. For classes and interfaces, all public instance methods will be traced.
+    - **Conflict Rule:** You cannot use `[ObservatorTrace]` on both a class and its methods at the same time. If both are present, a compile-time error will be emitted.
 - **No Attribute-Level Configuration**: The `[ObservatorTrace]` attribute does not support configuration properties (e.g., `IncludeParameters`).
 - **Limited Parameter Support**: Complex parameter types (e.g., pointers, `ref struct`) are not supported and will result in diagnostic warnings.
 - **No Generic Method Support**: Generic methods cannot be intercepted.
