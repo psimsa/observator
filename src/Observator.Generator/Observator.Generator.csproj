@@ -35,4 +35,8 @@
             <PackagePath>\</PackagePath>
         </None>
     </ItemGroup>
+  <ItemGroup>
+    <None Include="AnalyzerReleases.Shipped.md" Pack="true" PackagePath="analyzers/dotnet/cs/" />
+    <None Include="AnalyzerReleases.Unshipped.md" Pack="true" PackagePath="analyzers/dotnet/cs/" />
+  </ItemGroup>
 </Project>
