@@ -25,12 +25,13 @@ Each task must be represented as a separate Markdown file in the `/tasks` direct
 ## AI-Optimized Implementation Standards
 
 - Use explicit, unambiguous language with zero interpretation required.
-- Structure all content as machine-parseable formats (tables, lists, structured data).
-- Include specific file paths, line numbers, and exact code references where applicable, using information gathered from codebase inspection tools.
+- Structure all content as machine-parseable formats (tables, structured lists using YAML/JSON syntax within code blocks).
+- Include specific file paths and exact code references using the format `[file-path]:[line-number]` or `[file-path]:[start-line]-[end-line]`. Include code snippets in fenced code blocks with language identifiers.
 - Define all variables, constants, and configuration values explicitly within the task instructions if relevant.
 - Provide complete context within each task description, including relevant code snippets or file contents obtained via tools.
-- Use standardized prefixes for all identifiers (TASK-, FILE-, etc.).
+- Use standardized prefixes for all identifiers (TASK-, FILE-, REQ-, CON-, DEP-, TEST-, RISK-, ASSUMPTION-).
 - Include validation criteria that can be automatically verified after task execution.
+- **For sections requiring structured data (Prerequisites, Requirements, Implementation Steps, Dependencies, Files, Testing, Risks & Assumptions), use Markdown tables or YAML/JSON formatted lists within code blocks.**
 
 ## Output File Specifications
 
@@ -54,7 +55,7 @@ All generated task files must strictly adhere to the following template. Each se
 
 ```md
 ---
-goal: [Concise Title Describing the Specific Task's Goal]
+goal: [Concise Title Describing the Specific Task\'s Goal]
 version: [Optional: e.g., 1.0]
 date_created: [YYYY-MM-DD]
 last_updated: [Optional: YYYY-MM-DD]
@@ -68,53 +69,142 @@ related_plan_file: [The path to the main implementation plan file, e.g., /plan/f
 
 [A short concise introduction to this specific task.]
 
-## 1. Requirements & Constraints
+## 1. Prerequisites
 
-[List any requirements & constraints specifically relevant to this task, referencing the main plan's requirements as needed.]
+```yaml
+# List any necessary setup steps or conditions that must be met before starting the implementation steps.
+# Examples: installing dependencies, running a build task, ensuring a service is running.
+# Use action_type corresponding to the tool needed (e.g., run_in_terminal, run_vs_code_task).
+- prerequisite_id: PRE-001
+  description: "Ensure project dependencies are installed."
+  action_type: "run_in_terminal" # Or "run_vs_code_task"
+  command: "dotnet restore" # Example command
+  validation_criteria:
+    - type: "command_exit_code"
+      value: "0"
+      expected_result: "equals"
+      message: "Verify dotnet restore completed successfully."
+- prerequisite_id: PRE-002
+  description: "Run the build task to ensure the project compiles."
+  action_type: "run_vs_code_task"
+  task_id: "Build Observator TestApp" # Example task ID from workspace_info
+  validation_criteria:
+    - type: "task_status"
+      value: "success"
+      expected_result: "equals"
+      message: "Verify the build task completed successfully."
+```
 
-- **REQ-001**: Requirement 1 (from main plan)
-- **TASK-REQ-001**: Task-specific Requirement 1
-- **CON-001**: Constraint 1 (from main plan)
+## 2. Requirements & Constraints
 
-## 2. Implementation Steps
+| ID          | Type        | Description                                   | Source      |
+| :---------- | :---------- | :-------------------------------------------- | :---------- |
+| REQ-001     | Requirement | Requirement 1 (from main plan)                | main plan   |
+| TASK-REQ-001| Requirement | Task-specific Requirement 1                   | task-spec   |
+| CON-001     | Constraint  | Constraint 1 (from main plan)                 | main plan   |
+| TASK-CON-001| Constraint  | Task-specific Constraint 1                    | task-spec   |
 
-[Detailed, step-by-step instructions for completing this task. Use information gathered from codebase inspection tools to make these steps precise and actionable. Include specific file paths, function names, code snippets, or commands to run.]
+## 3. Implementation Steps
 
-- Step 1: [Description of step 1, including file paths and code references]
-- Step 2: [Description of step 2, including file paths and code references]
+```yaml
+# Define the sequence of actions required to complete the task.
+# Use action_type to specify the tool or operation (e.g., read_file, code_edit, run_in_terminal, run_vs_code_task, run_notebook_cell).
+# Provide detailed, unambiguous instructions for each step.
+# For code_edit steps, include context_code to help the AI locate the edit point.
+# Use structured validation_criteria to allow AI to verify step completion programmatically.
+- step_id: STEP-001
+  description: "Read the content of the target file to understand its structure."
+  action_type: "read_file"
+  target_file: "src/Service.cs" # Use absolute or workspace-relative paths
+  tools_to_use: ["read_file"]
+  validation_criteria:
+    - type: "file_content_read"
+      value: "src/Service.cs"
+      expected_result: "success"
+      message: "File content was successfully read."
 
-## 3. Dependencies
+- step_id: STEP-002
+  description: "Locate the insertion point for the new log statement within the `ProcessData` method using grep_search."
+  action_type: "grep_search"
+  target_file: "src/Service.cs"
+  search_pattern: "public void ProcessData\\(Item item\\)" # Use regex for precision
+  is_regexp: true # Explicitly state if pattern is regex
+  tools_to_use: ["grep_search"]
+  validation_criteria:
+    - type: "grep_search_result"
+      value: "public void ProcessData\\(Item item\\)"
+      expected_result: "match_found"
+      message: "Verify the method signature was found to confirm location."
 
-[List any dependencies that need to be addressed before this task can be completed.]
+- step_id: STEP-003
+  description: "Insert a log statement at the beginning of the `ProcessData` method using insert_edit_into_file."
+  action_type: "code_edit"
+  target_file: "src/Service.cs"
+  # target_location is a hint, context_code is the primary way to locate the edit point.
+  # Provide a few lines of surrounding code *before* the edit location.
+  context_code: |
+    ```csharp
+    // filepath: src/Service.cs
+    // ...existing code...
+    public void ProcessData(Item item)
+    {
+        // Insert the log statement here, after the opening brace.
+        // ...existing code...
+    ```
+  code_to_insert: |
+    ```csharp
+    // filepath: src/Service.cs
+    // ...existing code...
+    _logger.LogInformation(\\"Processing data for item: {ItemId}\\", item.Id);
+    // ...existing code...
+    ```
+  tools_to_use: ["insert_edit_into_file", "get_errors"] # List tools needed for action and validation
+  validation_criteria:
+    - type: "file_content_regex"
+      value: "_logger.LogInformation\\(\\\\"Processing data for item: {ItemId}\\\\", item.Id\\);"
+      expected_result: "match_found"
+      message: "Verify the log statement was inserted into the file."
+    - type: "get_errors"
+      value: "src/Service.cs"
+      expected_result: "no_errors"
+      message: "Verify no compilation errors were introduced by the edit."
 
-- **DEP-001**: Dependency 1
+# Add more steps as needed...
+```
 
-## 4. Files
+## 4. Dependencies
 
-[List the specific files that will be affected or created by this task.]
+| ID      | Description                               | Status    | Link                                       |
+| :------ | :---------------------------------------- | :-------- | :----------------------------------------- |
+| DEP-001 | Dependency 1                              | Open      |                                            |
+| DEP-002 | Another task (TASK-XXX-short-description) | Open      | /tasks/TASK-XXX-short-description.md       | # Link to other task files
+| DEP-003 | Prerequisites completed                   | Open      | # Dependency on the Prerequisites section    |
 
-- **FILE-001**: Path to file 1
-- **FILE-002**: Path to file 2
+## 5. Files
 
-## 5. Testing
+| ID      | Path                 | Purpose   |
+| :------ | :------------------- | :-------- |
+| FILE-001| src/Service.cs       | Modified  |
+| FILE-002| test/ServiceTests.cs | Modified  |
+| FILE-003| docs/task-001.md     | Created   |
 
-[List the specific tests that need to be run or implemented to verify the successful completion of this task.]
+## 6. Testing
 
-- **TEST-001**: Description of test 1
-- **TEST-002**: Description of test 2
+| ID      | Description                                   | Type      | Verification Steps/Command                 | Validation Criteria                                                                 |
+| :------ | :-------------------------------------------- | :-------- | :----------------------------------------- | :---------------------------------------------------------------------------------- |
+| TEST-001| Verify new log statement appears in logs.     | Manual    | Run application, check log output.         | N/A (Manual verification requires human intervention)                               |
+| TEST-002| Add unit test for `ProcessData` method logic. | Unit      | Run `dotnet test test/ServiceTests.csproj` | - type: "command_exit_code", value: "0", expected_result: "equals", message: "Unit tests passed successfully." | # Structured criteria for automated testing
+| TEST-003| Check for new errors after running tests.     | Automated | Run `dotnet test test/ServiceTests.csproj` | - type: "get_errors", value: "test/ServiceTests.cs", expected_result: "no_errors", message: "No new errors in test file after running tests." |
 
-## 6. Risks & Assumptions
+## 7. Risks & Assumptions
 
-[List any risks or assumptions specific to the implementation of this task.]
+| ID            | Type      | Description                                   | Mitigation/Justification |
+| :------------ | :-------- | :-------------------------------------------- | :----------------------- |
+| RISK-001      | Risk      | Potential performance impact of logging.      | Monitor performance metrics. |
+| ASSUMPTION-001| Assumption| Logging framework is already configured.      | Verify configuration.    |
 
-- **RISK-001**: Task-specific Risk 1
-- **ASSUMPTION-001**: Task-specific Assumption 1
+## 8. Related Specifications / Further Reading
 
-## 7. Related Specifications / Further Reading
-
-[Link to the main implementation plan, relevant specification files, or external documentation.]
-
-- [Link to main plan]
+- [Link to main plan]([The path to the main implementation plan file, e.g., /plan/feature-interface-interception-warning-1.md])
 - [Link to related spec]
 - [Link to relevant external documentation]
-```
