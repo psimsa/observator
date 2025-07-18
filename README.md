@@ -101,6 +101,18 @@ To build the project from source, you will need the .NET 9 SDK.
     dotnet build
     ```
 
+## Examples and Testing
+
+The repository includes several test projects that demonstrate how to use Observator:
+
+- **TestApp**: A complete example application showing Observator in action
+- **TestLib**: A test library with various scenarios for the generator
+- **RoslynTests**: Unit tests for the source generator
+
+## Contributing
+
+We welcome contributions! Please see the [project documentation](project.md) for detailed information about the project's goals, architecture, and contribution guidelines.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
