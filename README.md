@@ -11,10 +11,11 @@ Observator is an AOT-compatible source generator that automatically instruments 
 - **AOT-First Design**: Full compatibility with Native AOT compilation by eliminating runtime reflection.
 - **Zero Dependencies**: Only references `System.Diagnostics.DiagnosticSource`, which is built into .NET.
 - **Zero Configuration**: Works out-of-the-box with sensible defaults.
-- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods, classes, or interfaces with a simple `[ObservatorTrace]` attribute.
+- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods or classes with the `[ObservatorTrace]` attribute.
 - **Cross-Assembly Compatibility**: Supports instrumentation across project boundaries within a solution.
 - **High Performance**: Generates optimized code that adds minimal overhead to instrumented methods.
 - **Standards Compliant**: Generates code compatible with OpenTelemetry standards and .NET diagnostic conventions.
+- **Automatic Namespace Generation**: Creates a parallel namespace structure under `Observator.Generated` for the generated infrastructure code.
 
 ## Getting Started
 
@@ -28,61 +29,70 @@ dotnet add package Observator
 
 ### Usage
 
-1.  **Add the `[ObservatorTrace]` attribute** to any method, class, or interface you want to instrument. For classes and interfaces, all public instance methods will be traced.
-    - **Note:** You cannot use `[ObservatorTrace]` on both a class and its methods at the same time. If both are present, a compile-time error will be emitted.
+1. **Add the `[ObservatorTrace]` attribute** to any method or class you want to instrument. For classes, all public instance methods will be traced.
+   - **Note:** You cannot use `[ObservatorTrace]` on both a class and its methods at the same time. If both are present, a compile-time error will be emitted.
 
-    ```csharp
-    using Observator;
+   ```csharp
+   using Observator;
 
-    namespace MyAwesomeApp;
+   namespace MyAwesomeApp;
 
-    // Class-level usage (all methods instrumented)
-    [ObservatorTrace]
-    public class MyService
-    {
-        public virtual string Greet(string name)
-        {
-            return $"Hello, {name}!";
-        }
-    }
+   // Class-level usage with constructor parameters
+   [ObservatorTrace]
+   public class MyService
+   {
+       private readonly ILogger<MyService> _logger;
+       
+       public MyService(ILogger<MyService> logger)
+       {
+           _logger = logger;
+       }
+       
+       public virtual string Greet(string name)
+       {
+           return $"Hello, {name}!";
+       }
+   }
 
-    // Method-level usage (only this method instrumented)
-    public class MyOtherService
-    {
-        [ObservatorTrace]
-        public string OnlyThisIsTraced() => "Traced!";
-    }
+   // Method-level usage (only this method instrumented)
+   public class MyOtherService
+   {
+       [ObservatorTrace]
+       public string OnlyThisIsTraced() => "Traced!";
+   }
 
-    // Error: Do not combine class-level and method-level attributes
-    [ObservatorTrace]
-    public class InvalidService
-    {
-        [ObservatorTrace] // This will cause a compile-time error
-        public void Conflict() { }
-    }
-    ```
+   // Error: Do not combine class-level and method-level attributes
+   [ObservatorTrace]
+   public class InvalidService
+   {
+       [ObservatorTrace] // This will cause a compile-time error
+       public void Conflict() { }
+   }
+   ```
 
-2.  **Configure your OpenTelemetry pipeline** to listen to the `ActivitySource` created by Observator.
+2. **Configure your OpenTelemetry pipeline** to listen to the `ActivitySource` created by Observator.
 
-    ```csharp
-    using OpenTelemetry;
-    using OpenTelemetry.Trace;
-    using Observator.Generated.MyAwesomeApp; // Import the generated namespace
+   ```csharp
+   using OpenTelemetry;
+   using OpenTelemetry.Trace;
+   using Observator.Generated.MyAwesomeApp; // Import the generated namespace
 
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-                .AddSource(ObservatorInfrastructure.ActivitySourceName)
-                .AddConsoleExporter() // Or your preferred exporter
-                .Build();
+   public class Program
+   {
+       public static void Main(string[] args)
+       {
+           using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+               .AddSource(ObservatorInfrastructure.ActivitySourceName)
+               .AddConsoleExporter() // Or your preferred exporter
+               .Build();
 
-            var myService = new MyAwesomeApp.MyService();
-            myService.Greet("World");
-        }
-    }
-    ```
+           // Create service with dependency injection
+           var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+           var myService = new MyAwesomeApp.MyService(loggerFactory.CreateLogger<MyAwesomeApp.MyService>());
+           myService.Greet("World");
+       }
+   }
+   ```
 
 ## Building from Source
 
