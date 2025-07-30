@@ -11,7 +11,7 @@ Observator is an AOT-compatible source generator that automatically instruments 
 - **AOT-First Design**: Full compatibility with Native AOT compilation by eliminating runtime reflection.
 - **Zero Dependencies**: Only references `System.Diagnostics.DiagnosticSource`, which is built into .NET.
 - **Zero Configuration**: Works out-of-the-box with sensible defaults.
-- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods or classes with the `[ObservatorTrace]` attribute.
+- **Attribute-Driven Instrumentation**: Enable selective instrumentation by decorating methods, classes, or interfaces with the `[ObservatorTrace]` attribute.
 - **Cross-Assembly Compatibility**: Supports instrumentation across project boundaries within a solution.
 - **High Performance**: Generates optimized code that adds minimal overhead to instrumented methods.
 - **Standards Compliant**: Generates code compatible with OpenTelemetry standards and .NET diagnostic conventions.
@@ -29,7 +29,7 @@ dotnet add package Observator
 
 ### Usage
 
-1. **Add the `[ObservatorTrace]` attribute** to any method or class you want to instrument. For classes, all public instance methods will be traced.
+1. **Add the `[ObservatorTrace]` attribute** to any method, class, or interface you want to instrument. For classes and interfaces, all public instance methods will be traced.
    - **Note:** You cannot use `[ObservatorTrace]` on both a class and its methods at the same time. If both are present, a compile-time error will be emitted.
 
    ```csharp
@@ -59,6 +59,14 @@ dotnet add package Observator
    {
        [ObservatorTrace]
        public string OnlyThisIsTraced() => "Traced!";
+   }
+
+   // Interface-level usage (all methods in implementing classes will be traced)
+   [ObservatorTrace]
+   public interface IMyService
+   {
+       string DoSomething(string input);
+       int Calculate(int a, int b);
    }
 
    // Error: Do not combine class-level and method-level attributes
