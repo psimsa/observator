@@ -27,6 +27,6 @@ jobs:
       - name: Publish package to nuget.org
         run: dotnet nuget push ./artifacts/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/psimsa/index.json
       - name: Upload package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           path: ./artifacts/*.nupkg
