@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Observator" Version="0.0.7-preview" />
+        <PackageReference Include="Observator" Version="0.1.0-preview3" />
     </ItemGroup>
 
 </Project>
