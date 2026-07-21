@@ -18,7 +18,7 @@ jobs:
       - name: Build solution
         run: dotnet build -c Release
       - name: Fetch static secrets from Akeyless
-        uses: akeyless-community/akeyless-github-action@v1.1.6
+        uses: akeyless-community/akeyless-github-action@v1.1.7
         id: fetch-secrets
         with:
           access-id: ${{ secrets.AKEYLESS_ACCESS_ID }}
